@@ -34,10 +34,7 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
     setQuestions((currentQuestions) =>
       currentQuestions.map((item) =>
         item.id === id
-          ? {
-              ...item,
-              [field]: value,
-            }
+          ? { ...item, [field]: value }
           : item
       )
     );
@@ -195,7 +192,7 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
 
           <TextInput
             style={styles.titleInput}
-            placeholder="Example: General Knowledge Quiz"
+            placeholder="Example: Science Quiz"
             placeholderTextColor="#9CA3AF"
             value={quizTitle}
             onChangeText={setQuizTitle}
@@ -270,7 +267,7 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
             />
 
             {item.type === "Multiple Choice" && (
-              <>
+              <View>
                 <Text style={styles.label}>
                   ANSWER CHOICES
                 </Text>
@@ -308,11 +305,9 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
 
                     <TextInput
                       style={styles.choiceInput}
-                      placeholder={`Choice ${
-                        String.fromCharCode(
-                          65 + choiceIndex
-                        )
-                      }`}
+                      placeholder={`Choice ${String.fromCharCode(
+                        65 + choiceIndex
+                      )}`}
                       placeholderTextColor="#9CA3AF"
                       value={choice}
                       onChangeText={(value) =>
@@ -324,12 +319,12 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
                       }
                     />
                   </View>
-                )}
-              </>
+                ))}
+              </View>
             )}
 
             {item.type === "Identification" && (
-              <>
+              <View>
                 <Text style={styles.label}>
                   CORRECT ANSWER
                 </Text>
@@ -347,11 +342,11 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
                     )
                   }
                 />
-              </>
+              </View>
             )}
 
             {item.type === "Enumeration" && (
-              <>
+              <View>
                 <Text style={styles.label}>
                   CORRECT ANSWER
                 </Text>
@@ -374,11 +369,11 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
                 <Text style={styles.hint}>
                   Separate multiple answers with commas.
                 </Text>
-              </>
+              </View>
             )}
 
             {item.type === "Essay" && (
-              <>
+              <View>
                 <Text style={styles.label}>
                   CORRECT ANSWER / REFERENCE ANSWER
                 </Text>
@@ -399,10 +394,9 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
                 />
 
                 <Text style={styles.hint}>
-                  This answer will be used as the reference
-                  answer when reviewing the submission.
+                  This will be used as the reference answer.
                 </Text>
-              </>
+              </View>
             )}
           </View>
         ))}
@@ -638,7 +632,6 @@ const styles = StyleSheet.create({
     color: "#111827",
     fontSize: 14,
     fontWeight: "900",
-    letterSpacing: 0.5,
   },
 
   postButton: {
