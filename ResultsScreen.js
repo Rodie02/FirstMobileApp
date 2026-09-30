@@ -12,81 +12,139 @@ export default function ResultsScreen({
   navigation,
   quiz,
   submittedAnswer,
+  onDeleteQuiz,
 }) {
+  if (!quiz) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>
+            No Submitted Quiz
+          </Text>
+
+          <Text style={styles.emptyText}>
+            There is no saved quiz yet.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate("Maker")}
+          >
+            <Text style={styles.buttonText}>
+              CREATE QUIZ
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const isCorrect =
+    submittedAnswer.trim().toLowerCase() ===
+    quiz.correctAnswer.trim().toLowerCase();
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-          <Text style={styles.back}>‹ Back to Home</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Home")}
+        >
+          <Text style={styles.backText}>
+            ‹ Back to Home
+          </Text>
         </TouchableOpacity>
 
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>
-            Submitted Answer
+        <Text style={styles.title}>
+          Submitted Answer
+        </Text>
+
+        <Text style={styles.subtitle}>
+          Review the submitted answer below.
+        </Text>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>
+            QUESTION
           </Text>
 
-          <Text style={styles.headerText}>
-            View the answer submitted by the quiz taker.
+          <Text style={styles.question}>
+            {quiz.question}
           </Text>
-        </View>
 
-        {!quiz ? (
-          <View style={styles.card}>
-            <Text style={styles.emptyTitle}>No Quiz Yet</Text>
+          <Text style={styles.label}>
+            YOUR ANSWER
+          </Text>
 
-            <Text style={styles.emptyText}>
-              Create a quiz first before viewing submitted answers.
+          <View
+            style={[
+              styles.answerBox,
+              isCorrect
+                ? styles.correctBox
+                : styles.wrongBox,
+            ]}
+          >
+            <Text
+              style={[
+                styles.answerText,
+                isCorrect
+                  ? styles.correctText
+                  : styles.wrongText,
+              ]}
+            >
+              {submittedAnswer || "No answer submitted"}
             </Text>
           </View>
-        ) : (
-          <View>
-            <View style={styles.card}>
-              <Text style={styles.label}>QUESTION</Text>
 
-              <Text style={styles.question}>
-                {quiz.question}
-              </Text>
+          <Text style={styles.label}>
+            CORRECT ANSWER
+          </Text>
 
-              <Text style={styles.label}>QUESTION TYPE</Text>
+          <Text style={styles.correctAnswer}>
+            {quiz.correctAnswer}
+          </Text>
 
-              <Text style={styles.value}>
-                {quiz.type}
-              </Text>
-            </View>
-
-            <View style={styles.answerCard}>
-              <Text style={styles.label}>
-                SUBMITTED ANSWER
-              </Text>
-
-              {submittedAnswer ? (
-                <Text style={styles.answer}>
-                  {submittedAnswer}
-                </Text>
-              ) : (
-                <Text style={styles.noAnswer}>
-                  No answer has been submitted yet.
-                </Text>
-              )}
-            </View>
+          <View
+            style={[
+              styles.statusBox,
+              isCorrect
+                ? styles.correctStatus
+                : styles.wrongStatus,
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                isCorrect
+                  ? styles.correctStatusText
+                  : styles.wrongStatusText,
+              ]}
+            >
+              {isCorrect
+                ? "✓ CORRECT ANSWER"
+                : "✕ WRONG ANSWER"}
+            </Text>
           </View>
-        )}
+        </View>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("Maker")}
+          onPress={() => navigation.navigate("Answer")}
         >
           <Text style={styles.buttonText}>
-            CREATE ANOTHER QUIZ
+            ANSWER AGAIN
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate("Answer")}
+          style={styles.deleteButton}
+          onPress={() => {
+            alert("Quiz and submitted answer deleted.");
+            onDeleteQuiz();
+            navigation.navigate("Home");
+          }}
         >
-          <Text style={styles.secondaryText}>
-            VIEW QUIZ
+          <Text style={styles.deleteText}>
+            DELETE QUIZ
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -102,51 +160,34 @@ const styles = StyleSheet.create({
 
   content: {
     padding: 20,
-    paddingBottom: 50,
+    paddingBottom: 40,
   },
 
-  back: {
-    fontSize: 14,
+  backText: {
+    color: "#6B7280",
+    fontSize: 15,
     fontWeight: "700",
-    color: "#374151",
-    marginBottom: 18,
-  },
-
-  header: {
-    backgroundColor: "#111827",
-    borderRadius: 22,
-    padding: 24,
     marginBottom: 20,
   },
 
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 27,
+  title: {
+    fontSize: 32,
     fontWeight: "900",
+    color: "#111827",
   },
 
-  headerText: {
-    color: "#D1D5DB",
-    marginTop: 8,
-    lineHeight: 20,
+  subtitle: {
+    color: "#6B7280",
+    marginTop: 5,
+    marginBottom: 25,
   },
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 20,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    marginBottom: 14,
-  },
-
-  answerCard: {
-    backgroundColor: "#ECFDF5",
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-    marginBottom: 14,
   },
 
   label: {
@@ -154,6 +195,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#6B7280",
     letterSpacing: 1.5,
+    marginTop: 8,
     marginBottom: 8,
   },
 
@@ -161,30 +203,112 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: "800",
     color: "#111827",
+    marginBottom: 20,
     lineHeight: 27,
+  },
+
+  answerBox: {
+    borderRadius: 14,
+    padding: 15,
+    borderWidth: 2,
     marginBottom: 20,
   },
 
-  value: {
-    fontSize: 15,
-    color: "#374151",
-    fontWeight: "700",
+  correctBox: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#10B981",
   },
 
-  answer: {
-    fontSize: 21,
+  wrongBox: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#EF4444",
+  },
+
+  answerText: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  correctText: {
+    color: "#047857",
+  },
+
+  wrongText: {
+    color: "#DC2626",
+  },
+
+  correctAnswer: {
+    fontSize: 17,
     fontWeight: "800",
     color: "#047857",
-    lineHeight: 30,
+    marginBottom: 20,
   },
 
-  noAnswer: {
-    color: "#6B7280",
-    fontSize: 14,
+  statusBox: {
+    padding: 15,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+
+  correctStatus: {
+    backgroundColor: "#D1FAE5",
+  },
+
+  wrongStatus: {
+    backgroundColor: "#FEE2E2",
+  },
+
+  statusText: {
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  correctStatusText: {
+    color: "#047857",
+  },
+
+  wrongStatusText: {
+    color: "#DC2626",
+  },
+
+  button: {
+    backgroundColor: "#111827",
+    paddingVertical: 17,
+    borderRadius: 15,
+    alignItems: "center",
+    marginTop: 20,
+  },
+
+  buttonText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  deleteButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#EF4444",
+    paddingVertical: 16,
+    borderRadius: 15,
+    alignItems: "center",
+    marginTop: 12,
+  },
+
+  deleteText: {
+    color: "#DC2626",
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 25,
   },
 
   emptyTitle: {
-    fontSize: 21,
+    fontSize: 25,
     fontWeight: "900",
     color: "#111827",
     textAlign: "center",
@@ -194,30 +318,5 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
     marginTop: 8,
-  },
-
-  button: {
-    backgroundColor: "#111827",
-    borderRadius: 14,
-    paddingVertical: 17,
-    alignItems: "center",
-    marginTop: 5,
-  },
-
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-
-  secondaryButton: {
-    paddingVertical: 17,
-    alignItems: "center",
-  },
-
-  secondaryText: {
-    color: "#374151",
-    fontWeight: "800",
   },
 });
