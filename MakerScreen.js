@@ -10,71 +10,173 @@ import {
 } from "react-native";
 
 export default function MakerScreen({ navigation, onCreateQuiz }) {
-  const [questionType, setQuestionType] = useState("Multiple Choice");
-  const [question, setQuestion] = useState("");
-  const [choiceA, setChoiceA] = useState("");
-  const [choiceB, setChoiceB] = useState("");
-  const [choiceC, setChoiceC] = useState("");
-  const [choiceD, setChoiceD] = useState("");
-  const [correctAnswer, setCorrectAnswer] = useState("");
+  const createEmptyQuestion = () => ({
+    id: Date.now() + Math.random(),
+    type: "Multiple Choice",
+    question: "",
+    choices: ["", "", "", ""],
+    correctAnswer: "",
+  });
 
-  const postQuestion = () => {
-    if (question.trim() === "") {
-      alert("Please enter a question.");
+  const [quizTitle, setQuizTitle] = useState("");
+  const [questions, setQuestions] = useState([
+    createEmptyQuestion(),
+  ]);
+
+  const questionTypes = [
+    "Multiple Choice",
+    "Identification",
+    "Enumeration",
+    "Essay",
+  ];
+
+  const updateQuestion = (id, field, value) => {
+    setQuestions((currentQuestions) =>
+      currentQuestions.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item
+      )
+    );
+  };
+
+  const updateChoice = (id, choiceIndex, value) => {
+    setQuestions((currentQuestions) =>
+      currentQuestions.map((item) => {
+        if (item.id !== id) {
+          return item;
+        }
+
+        const updatedChoices = [...item.choices];
+        updatedChoices[choiceIndex] = value;
+
+        return {
+          ...item,
+          choices: updatedChoices,
+        };
+      })
+    );
+  };
+
+  const changeQuestionType = (id, type) => {
+    setQuestions((currentQuestions) =>
+      currentQuestions.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              type: type,
+              correctAnswer: "",
+            }
+          : item
+      )
+    );
+  };
+
+  const selectCorrectAnswer = (id, answer) => {
+    setQuestions((currentQuestions) =>
+      currentQuestions.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              correctAnswer: answer,
+            }
+          : item
+      )
+    );
+  };
+
+  const addQuestion = () => {
+    setQuestions((currentQuestions) => [
+      ...currentQuestions,
+      createEmptyQuestion(),
+    ]);
+  };
+
+  const removeQuestion = (id) => {
+    if (questions.length === 1) {
+      alert("You need at least one question.");
       return;
     }
 
-    if (questionType === "Multiple Choice") {
-      if (
-        choiceA.trim() === "" ||
-        choiceB.trim() === "" ||
-        choiceC.trim() === "" ||
-        choiceD.trim() === ""
-      ) {
-        alert("Please enter all four choices.");
+    setQuestions((currentQuestions) =>
+      currentQuestions.filter((item) => item.id !== id)
+    );
+  };
+
+  const postQuiz = () => {
+    if (quizTitle.trim() === "") {
+      alert("Please enter a quiz title.");
+      return;
+    }
+
+    for (let i = 0; i < questions.length; i++) {
+      const item = questions[i];
+
+      if (item.question.trim() === "") {
+        alert(`Please enter Question ${i + 1}.`);
         return;
       }
 
-      if (correctAnswer === "") {
-        alert("Please select the correct answer.");
-        return;
-      }
-    } else {
-      if (correctAnswer.trim() === "") {
-        alert("Please enter the correct answer.");
-        return;
+      if (item.type === "Multiple Choice") {
+        const hasEmptyChoice = item.choices.some(
+          (choice) => choice.trim() === ""
+        );
+
+        if (hasEmptyChoice) {
+          alert(
+            `Please complete all choices for Question ${i + 1}.`
+          );
+          return;
+        }
+
+        if (item.correctAnswer === "") {
+          alert(
+            `Please select the correct answer for Question ${i + 1}.`
+          );
+          return;
+        }
+      } else {
+        if (item.correctAnswer.trim() === "") {
+          alert(
+            `Please enter the correct answer for Question ${i + 1}.`
+          );
+          return;
+        }
       }
     }
 
     const quiz = {
-      type: questionType,
-      question: question.trim(),
-      choices:
-        questionType === "Multiple Choice"
-          ? [
-              choiceA.trim(),
-              choiceB.trim(),
-              choiceC.trim(),
-              choiceD.trim(),
-            ]
-          : [],
-      correctAnswer: correctAnswer.trim(),
+      id: Date.now().toString(),
+      title: quizTitle.trim(),
+      questions: questions.map((item, index) => ({
+        id: item.id,
+        number: index + 1,
+        type: item.type,
+        question: item.question.trim(),
+        choices:
+          item.type === "Multiple Choice"
+            ? item.choices.map((choice) => choice.trim())
+            : [],
+        correctAnswer: item.correctAnswer.trim(),
+      })),
     };
 
     onCreateQuiz(quiz);
 
-    alert("Question posted successfully!");
+    alert("Quiz posted successfully!");
 
     navigation.navigate("Answer");
   };
 
-  const selectCorrectAnswer = (answer) => {
-    setCorrectAnswer(answer);
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.navigate("Home")}
@@ -85,168 +187,253 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
         <Text style={styles.title}>Quiz Maker</Text>
 
         <Text style={styles.subtitle}>
-          Create and post your question
+          Create a quiz with multiple questions.
         </Text>
 
-        <Text style={styles.label}>Question Type</Text>
+        <View style={styles.titleCard}>
+          <Text style={styles.label}>QUIZ TITLE</Text>
 
-        <View style={styles.typeContainer}>
-          {[
-            "Multiple Choice",
-            "Identification",
-            "Enumeration",
-            "Essay",
-          ].map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.typeButton,
-                questionType === type && styles.selectedType,
-              ]}
-              onPress={() => {
-                setQuestionType(type);
-                setCorrectAnswer("");
-              }}
-            >
-              <Text
-                style={[
-                  styles.typeText,
-                  questionType === type && styles.selectedTypeText,
-                ]}
-              >
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <TextInput
+            style={styles.titleInput}
+            placeholder="Example: General Knowledge Quiz"
+            placeholderTextColor="#9CA3AF"
+            value={quizTitle}
+            onChangeText={setQuizTitle}
+          />
         </View>
 
-        <Text style={styles.label}>Question</Text>
+        {questions.map((item, index) => (
+          <View style={styles.questionCard} key={item.id}>
+            <View style={styles.questionHeader}>
+              <Text style={styles.questionNumber}>
+                QUESTION {index + 1}
+              </Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your question"
-          value={question}
-          onChangeText={setQuestion}
-          multiline
-        />
+              {questions.length > 1 && (
+                <TouchableOpacity
+                  onPress={() => removeQuestion(item.id)}
+                >
+                  <Text style={styles.removeText}>
+                    Remove
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-        {questionType === "Multiple Choice" && (
-          <>
-            <Text style={styles.label}>Choices</Text>
-
-            <TouchableOpacity
-              style={[
-                styles.choiceRow,
-                correctAnswer === choiceA && choiceA !== "" && styles.correctChoice,
-              ]}
-              onPress={() => selectCorrectAnswer(choiceA)}
-            >
-              <View style={styles.radio}>
-                {correctAnswer === choiceA && choiceA !== "" && (
-                  <Text style={styles.check}>✓</Text>
-                )}
-              </View>
-
-              <TextInput
-                style={styles.choiceInput}
-                placeholder="Choice A"
-                value={choiceA}
-                onChangeText={setChoiceA}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.choiceRow,
-                correctAnswer === choiceB && choiceB !== "" && styles.correctChoice,
-              ]}
-              onPress={() => selectCorrectAnswer(choiceB)}
-            >
-              <View style={styles.radio}>
-                {correctAnswer === choiceB && choiceB !== "" && (
-                  <Text style={styles.check}>✓</Text>
-                )}
-              </View>
-
-              <TextInput
-                style={styles.choiceInput}
-                placeholder="Choice B"
-                value={choiceB}
-                onChangeText={setChoiceB}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.choiceRow,
-                correctAnswer === choiceC && choiceC !== "" && styles.correctChoice,
-              ]}
-              onPress={() => selectCorrectAnswer(choiceC)}
-            >
-              <View style={styles.radio}>
-                {correctAnswer === choiceC && choiceC !== "" && (
-                  <Text style={styles.check}>✓</Text>
-                )}
-              </View>
-
-              <TextInput
-                style={styles.choiceInput}
-                placeholder="Choice C"
-                value={choiceC}
-                onChangeText={setChoiceC}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.choiceRow,
-                correctAnswer === choiceD && choiceD !== "" && styles.correctChoice,
-              ]}
-              onPress={() => selectCorrectAnswer(choiceD)}
-            >
-              <View style={styles.radio}>
-                {correctAnswer === choiceD && choiceD !== "" && (
-                  <Text style={styles.check}>✓</Text>
-                )}
-              </View>
-
-              <TextInput
-                style={styles.choiceInput}
-                placeholder="Choice D"
-                value={choiceD}
-                onChangeText={setChoiceD}
-              />
-            </TouchableOpacity>
-
-            <Text style={styles.hint}>
-              Tap the circle beside a choice to mark it as correct.
+            <Text style={styles.label}>
+              QUESTION TYPE
             </Text>
-          </>
-        )}
 
-        {questionType !== "Multiple Choice" && (
-          <>
-            <Text style={styles.label}>Correct Answer</Text>
+            <View style={styles.typeContainer}>
+              {questionTypes.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeButton,
+                    item.type === type &&
+                      styles.selectedType,
+                  ]}
+                  onPress={() =>
+                    changeQuestionType(item.id, type)
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.typeText,
+                      item.type === type &&
+                        styles.selectedTypeText,
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>
+              QUESTION
+            </Text>
 
             <TextInput
               style={styles.input}
-              placeholder="Enter the correct answer"
-              value={correctAnswer}
-              onChangeText={setCorrectAnswer}
+              placeholder="Enter your question"
+              placeholderTextColor="#9CA3AF"
+              value={item.question}
+              onChangeText={(value) =>
+                updateQuestion(
+                  item.id,
+                  "question",
+                  value
+                )
+              }
               multiline
             />
-          </>
-        )}
+
+            {item.type === "Multiple Choice" && (
+              <>
+                <Text style={styles.label}>
+                  ANSWER CHOICES
+                </Text>
+
+                <Text style={styles.hint}>
+                  Tap the circle beside the correct answer.
+                </Text>
+
+                {item.choices.map((choice, choiceIndex) => (
+                  <View
+                    style={[
+                      styles.choiceRow,
+                      item.correctAnswer === choice &&
+                        choice.trim() !== "" &&
+                        styles.correctChoice,
+                    ]}
+                    key={choiceIndex}
+                  >
+                    <TouchableOpacity
+                      style={styles.radioButton}
+                      onPress={() =>
+                        selectCorrectAnswer(
+                          item.id,
+                          choice
+                        )
+                      }
+                    >
+                      {item.correctAnswer === choice &&
+                        choice.trim() !== "" && (
+                          <Text style={styles.check}>
+                            ✓
+                          </Text>
+                        )}
+                    </TouchableOpacity>
+
+                    <TextInput
+                      style={styles.choiceInput}
+                      placeholder={`Choice ${
+                        String.fromCharCode(
+                          65 + choiceIndex
+                        )
+                      }`}
+                      placeholderTextColor="#9CA3AF"
+                      value={choice}
+                      onChangeText={(value) =>
+                        updateChoice(
+                          item.id,
+                          choiceIndex,
+                          value
+                        )
+                      }
+                    />
+                  </View>
+                )}
+              </>
+            )}
+
+            {item.type === "Identification" && (
+              <>
+                <Text style={styles.label}>
+                  CORRECT ANSWER
+                </Text>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter the correct answer"
+                  placeholderTextColor="#9CA3AF"
+                  value={item.correctAnswer}
+                  onChangeText={(value) =>
+                    updateQuestion(
+                      item.id,
+                      "correctAnswer",
+                      value
+                    )
+                  }
+                />
+              </>
+            )}
+
+            {item.type === "Enumeration" && (
+              <>
+                <Text style={styles.label}>
+                  CORRECT ANSWER
+                </Text>
+
+                <TextInput
+                  style={[styles.input, styles.largeInput]}
+                  placeholder="Example: Solid, Liquid, Gas"
+                  placeholderTextColor="#9CA3AF"
+                  value={item.correctAnswer}
+                  onChangeText={(value) =>
+                    updateQuestion(
+                      item.id,
+                      "correctAnswer",
+                      value
+                    )
+                  }
+                  multiline
+                />
+
+                <Text style={styles.hint}>
+                  Separate multiple answers with commas.
+                </Text>
+              </>
+            )}
+
+            {item.type === "Essay" && (
+              <>
+                <Text style={styles.label}>
+                  CORRECT ANSWER / REFERENCE ANSWER
+                </Text>
+
+                <TextInput
+                  style={[styles.input, styles.largeInput]}
+                  placeholder="Enter the expected or reference answer"
+                  placeholderTextColor="#9CA3AF"
+                  value={item.correctAnswer}
+                  onChangeText={(value) =>
+                    updateQuestion(
+                      item.id,
+                      "correctAnswer",
+                      value
+                    )
+                  }
+                  multiline
+                />
+
+                <Text style={styles.hint}>
+                  This answer will be used as the reference
+                  answer when reviewing the submission.
+                </Text>
+              </>
+            )}
+          </View>
+        ))}
+
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={addQuestion}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.addButtonText}>
+            + ADD QUESTION
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.postButton}
-          onPress={postQuestion}
+          onPress={postQuiz}
           activeOpacity={0.8}
         >
           <Text style={styles.postButtonText}>
-            POST QUESTION
+            POST QUIZ
           </Text>
         </TouchableOpacity>
+
+        <Text style={styles.footer}>
+          {questions.length}{" "}
+          {questions.length === 1
+            ? "question"
+            : "questions"}{" "}
+          in this quiz
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -260,7 +447,7 @@ const styles = StyleSheet.create({
 
   content: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 50,
   },
 
   backButton: {
@@ -282,28 +469,78 @@ const styles = StyleSheet.create({
   subtitle: {
     color: "#6B7280",
     marginTop: 5,
-    marginBottom: 25,
+    marginBottom: 20,
+  },
+
+  titleCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  questionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  questionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+
+  questionNumber: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#111827",
+    letterSpacing: 1,
+  },
+
+  removeText: {
+    color: "#DC2626",
+    fontSize: 13,
+    fontWeight: "800",
   },
 
   label: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 10,
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#6B7280",
+    letterSpacing: 1.3,
     marginTop: 12,
+    marginBottom: 9,
+  },
+
+  titleInput: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 13,
+    padding: 14,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
   },
 
   typeContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 7,
   },
 
   typeButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 13,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    paddingVertical: 9,
+    paddingHorizontal: 11,
+    borderRadius: 11,
+    backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
@@ -316,7 +553,7 @@ const styles = StyleSheet.create({
   typeText: {
     color: "#374151",
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: 11,
   },
 
   selectedTypeText: {
@@ -324,23 +561,35 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 14,
-    padding: 15,
+    borderRadius: 13,
+    padding: 14,
     fontSize: 15,
     color: "#111827",
-    minHeight: 55,
+    minHeight: 52,
+    textAlignVertical: "top",
+  },
+
+  largeInput: {
+    minHeight: 100,
+  },
+
+  hint: {
+    color: "#6B7280",
+    fontSize: 11,
+    lineHeight: 17,
+    marginBottom: 8,
   },
 
   choiceRow: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 14,
-    padding: 8,
-    marginBottom: 10,
+    borderRadius: 13,
+    padding: 7,
+    marginBottom: 9,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -350,10 +599,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
 
-  radio: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  radioButton: {
+    width: 31,
+    height: 31,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: "#9CA3AF",
     justifyContent: "center",
@@ -362,31 +611,42 @@ const styles = StyleSheet.create({
   },
 
   check: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "900",
     color: "#111827",
   },
 
   choiceInput: {
     flex: 1,
-    padding: 10,
-    fontSize: 15,
+    padding: 9,
+    fontSize: 14,
     color: "#111827",
   },
 
-  hint: {
-    color: "#6B7280",
-    fontSize: 12,
-    marginTop: 2,
-    marginBottom: 15,
+  addButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#111827",
+    borderStyle: "dashed",
+    paddingVertical: 16,
+    borderRadius: 15,
+    alignItems: "center",
+    marginTop: 5,
+  },
+
+  addButtonText: {
+    color: "#111827",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
 
   postButton: {
     backgroundColor: "#111827",
-    paddingVertical: 17,
+    paddingVertical: 18,
     borderRadius: 15,
     alignItems: "center",
-    marginTop: 25,
+    marginTop: 14,
   },
 
   postButtonText: {
@@ -394,5 +654,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     letterSpacing: 1,
+  },
+
+  footer: {
+    textAlign: "center",
+    color: "#9CA3AF",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 15,
   },
 });
