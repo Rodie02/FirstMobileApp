@@ -5,8 +5,8 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
+  SafeAreaView,
 } from "react-native";
 
 export default function AnswerScreen({
@@ -14,7 +14,7 @@ export default function AnswerScreen({
   quiz,
   onSubmitAnswer,
 }) {
-  const [answer, setAnswer] = useState("");
+  const [answers, setAnswers] = useState({});
 
   if (!quiz) {
     return (
@@ -23,120 +23,237 @@ export default function AnswerScreen({
           <Text style={styles.emptyTitle}>No Quiz Available</Text>
 
           <Text style={styles.emptyText}>
-            The quiz maker has not posted a question yet.
+            Please create a quiz first.
           </Text>
 
           <TouchableOpacity
             style={styles.button}
             onPress={() => navigation.navigate("Maker")}
           >
-            <Text style={styles.buttonText}>CREATE A QUIZ</Text>
+            <Text style={styles.buttonText}>
+              CREATE QUIZ
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.homeButton}
+            style={styles.backButton}
             onPress={() => navigation.navigate("Home")}
           >
-            <Text style={styles.homeButtonText}>BACK TO HOME</Text>
+            <Text style={styles.backButtonText}>
+              BACK TO HOME
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const submitAnswer = () => {
-    if (!answer.trim()) {
-      alert("Please answer the question.");
+  const updateAnswer = (questionId, answer) => {
+    setAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [questionId]: answer,
+    }));
+  };
+
+  const submitQuiz = () => {
+    const unanswered = quiz.questions.some(
+      (question) =>
+        !answers[question.id] ||
+        answers[question.id].trim() === ""
+    );
+
+    if (unanswered) {
+      alert("Please answer all questions before submitting.");
       return;
     }
 
-    onSubmitAnswer(answer.trim());
+    onSubmitAnswer(answers);
 
-    alert("Answer submitted successfully!");
-
-    navigation.navigate("Results");
+    navigation.navigate("Results", {
+      answers,
+    });
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-          <Text style={styles.back}>‹ Back to Home</Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Home")}
+        >
+          <Text style={styles.backText}>‹ Back</Text>
         </TouchableOpacity>
 
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Quiz Taker</Text>
+        <Text style={styles.title}>{quiz.title}</Text>
 
-          <Text style={styles.headerText}>
-            Answer the question posted by the quiz maker.
-          </Text>
-        </View>
+        <Text style={styles.subtitle}>
+          Answer all questions.
+        </Text>
 
-        <View style={styles.quizCard}>
-          <Text style={styles.type}>{quiz.type}</Text>
+        {quiz.questions.map((question, index) => (
+          <View
+            style={styles.questionCard}
+            key={question.id}
+          >
+            <Text style={styles.questionNumber}>
+              QUESTION {index + 1}
+            </Text>
 
-          <Text style={styles.question}>{quiz.question}</Text>
+            <Text style={styles.questionType}>
+              {question.type}
+            </Text>
 
-          {quiz.type === "Multiple Choice" ? (
-            <View>
-              {quiz.choices.map((choice, index) => {
-                const letter = String.fromCharCode(65 + index);
+            <Text style={styles.questionText}>
+              {question.question}
+            </Text>
 
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.choice,
-                      answer === choice && styles.selectedChoice,
-                    ]}
-                    onPress={() => setAnswer(choice)}
-                  >
-                    <View
-                      style={[
-                        styles.radio,
-                        answer === choice && styles.selectedRadio,
-                      ]}
-                    >
-                      {answer === choice && (
-                        <View style={styles.radioDot} />
-                      )}
-                    </View>
+            {question.type === "Multiple Choice" && (
+              <View style={styles.choicesContainer}>
+                {question.choices.map(
+                  (choice, choiceIndex) => {
+                    const letter =
+                      String.fromCharCode(
+                        65 + choiceIndex
+                      );
 
-                    <Text style={styles.choiceLetter}>
-                      {letter}.
-                    </Text>
+                    const selected =
+                      answers[question.id] === choice;
 
-                    <Text style={styles.choiceText}>
-                      {choice}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <TextInput
-              style={
-                quiz.type === "Essay"
-                  ? styles.essayInput
-                  : styles.answerInput
-              }
-              placeholder="Type your answer here..."
-              multiline={quiz.type === "Essay"}
-              value={answer}
-              onChangeText={setAnswer}
-              textAlignVertical={
-                quiz.type === "Essay" ? "top" : "center"
-              }
-            />
-          )}
-        </View>
+                    return (
+                      <TouchableOpacity
+                        key={choiceIndex}
+                        style={[
+                          styles.choiceButton,
+                          selected &&
+                            styles.selectedChoice,
+                        ]}
+                        onPress={() =>
+                          updateAnswer(
+                            question.id,
+                            choice
+                          )
+                        }
+                      >
+                        <View
+                          style={[
+                            styles.radio,
+                            selected &&
+                              styles.selectedRadio,
+                          ]}
+                        >
+                          {selected && (
+                            <Text style={styles.radioCheck}>
+                              ✓
+                            </Text>
+                          )}
+                        </View>
+
+                        <Text
+                          style={[
+                            styles.choiceLetter,
+                            selected &&
+                              styles.selectedChoiceText,
+                          ]}
+                        >
+                          {letter}
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.choiceText,
+                            selected &&
+                              styles.selectedChoiceText,
+                          ]}
+                        >
+                          {choice}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }
+                )}
+              </View>
+            )}
+
+            {question.type === "Identification" && (
+              <TextInput
+                style={styles.input}
+                placeholder="Type your answer"
+                placeholderTextColor="#9CA3AF"
+                value={answers[question.id] || ""}
+                onChangeText={(value) =>
+                  updateAnswer(
+                    question.id,
+                    value
+                  )
+                }
+              />
+            )}
+
+            {question.type === "Enumeration" && (
+              <View>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.largeInput,
+                  ]}
+                  placeholder="Enter your answers"
+                  placeholderTextColor="#9CA3AF"
+                  value={answers[question.id] || ""}
+                  onChangeText={(value) =>
+                    updateAnswer(
+                      question.id,
+                      value
+                    )
+                  }
+                  multiline
+                />
+
+                <Text style={styles.hint}>
+                  Separate multiple answers with commas.
+                </Text>
+              </View>
+            )}
+
+            {question.type === "Essay" && (
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.essayInput,
+                ]}
+                placeholder="Write your answer..."
+                placeholderTextColor="#9CA3AF"
+                value={answers[question.id] || ""}
+                onChangeText={(value) =>
+                  updateAnswer(
+                    question.id,
+                    value
+                  )
+                }
+                multiline
+                textAlignVertical="top"
+              />
+            )}
+          </View>
+        ))}
 
         <TouchableOpacity
           style={styles.submitButton}
-          onPress={submitAnswer}
+          onPress={submitQuiz}
+          activeOpacity={0.8}
         >
-          <Text style={styles.submitText}>SUBMIT ANSWER</Text>
+          <Text style={styles.submitButtonText}>
+            SUBMIT QUIZ
+          </Text>
         </TouchableOpacity>
+
+        <Text style={styles.footer}>
+          {quiz.questions.length}{" "}
+          {quiz.questions.length === 1
+            ? "question"
+            : "questions"}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -153,76 +270,81 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
 
-  back: {
-    fontSize: 14,
+  backText: {
+    fontSize: 16,
+    color: "#6B7280",
     fontWeight: "700",
-    color: "#374151",
-    marginBottom: 18,
+    marginBottom: 15,
   },
 
-  header: {
-    backgroundColor: "#111827",
-    borderRadius: 22,
-    padding: 24,
+  title: {
+    fontSize: 30,
+    fontWeight: "900",
+    color: "#111827",
+  },
+
+  subtitle: {
+    color: "#6B7280",
+    marginTop: 5,
     marginBottom: 20,
   },
 
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 27,
-    fontWeight: "900",
-  },
-
-  headerText: {
-    color: "#D1D5DB",
-    marginTop: 8,
-    lineHeight: 20,
-  },
-
-  quizCard: {
+  questionCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    padding: 20,
+    padding: 18,
+    marginBottom: 15,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
 
-  type: {
-    color: "#6B7280",
+  questionNumber: {
     fontSize: 12,
-    fontWeight: "800",
-    textTransform: "uppercase",
+    fontWeight: "900",
+    color: "#111827",
+    letterSpacing: 1.2,
+  },
+
+  questionType: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#6B7280",
+    marginTop: 5,
     marginBottom: 12,
   },
 
-  question: {
-    color: "#111827",
-    fontSize: 20,
+  questionText: {
+    fontSize: 18,
     fontWeight: "800",
-    lineHeight: 28,
-    marginBottom: 22,
+    color: "#111827",
+    lineHeight: 26,
+    marginBottom: 15,
   },
 
-  choice: {
+  choicesContainer: {
+    gap: 10,
+  },
+
+  choiceButton: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 14,
-    padding: 15,
-    marginBottom: 10,
+    padding: 12,
   },
 
   selectedChoice: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#059669",
+    borderWidth: 2,
+    borderColor: "#111827",
+    backgroundColor: "#F3F4F6",
   },
 
   radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 2,
     borderColor: "#9CA3AF",
     justifyContent: "center",
@@ -231,88 +353,109 @@ const styles = StyleSheet.create({
   },
 
   selectedRadio: {
-    borderColor: "#059669",
+    borderColor: "#111827",
+    backgroundColor: "#111827",
   },
 
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#059669",
+  radioCheck: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "900",
   },
 
   choiceLetter: {
+    fontSize: 14,
     fontWeight: "900",
-    color: "#374151",
-    marginRight: 7,
+    color: "#6B7280",
+    width: 25,
   },
 
   choiceText: {
     flex: 1,
     fontSize: 15,
     color: "#111827",
+    fontWeight: "600",
   },
 
-  answerInput: {
+  selectedChoiceText: {
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  input: {
     backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 13,
-    padding: 15,
+    borderRadius: 14,
+    padding: 14,
     fontSize: 15,
+    color: "#111827",
+    minHeight: 52,
   },
 
-  essayInput: {
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 13,
-    padding: 15,
-    fontSize: 15,
-    minHeight: 170,
+  largeInput: {
+    minHeight: 100,
     textAlignVertical: "top",
   },
 
-  submitButton: {
-    backgroundColor: "#059669",
-    borderRadius: 14,
-    paddingVertical: 17,
-    alignItems: "center",
-    marginTop: 18,
+  essayInput: {
+    minHeight: 160,
+    textAlignVertical: "top",
   },
 
-  submitText: {
+  hint: {
+    color: "#6B7280",
+    fontSize: 11,
+    marginTop: 7,
+  },
+
+  submitButton: {
+    backgroundColor: "#111827",
+    paddingVertical: 18,
+    borderRadius: 15,
+    alignItems: "center",
+    marginTop: 5,
+  },
+
+  submitButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "900",
     letterSpacing: 1,
+  },
+
+  footer: {
+    textAlign: "center",
+    color: "#9CA3AF",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 15,
   },
 
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
+    alignItems: "center",
     padding: 25,
   },
 
   emptyTitle: {
-    fontSize: 26,
+    fontSize: 25,
     fontWeight: "900",
-    textAlign: "center",
     color: "#111827",
   },
 
   emptyText: {
-    textAlign: "center",
     color: "#6B7280",
-    marginTop: 10,
-    marginBottom: 25,
+    marginTop: 8,
+    marginBottom: 20,
   },
 
   button: {
     backgroundColor: "#111827",
-    padding: 16,
-    borderRadius: 14,
-    alignItems: "center",
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 13,
   },
 
   buttonText: {
@@ -320,13 +463,13 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
-  homeButton: {
-    padding: 16,
-    alignItems: "center",
+  backButton: {
+    marginTop: 12,
+    padding: 10,
   },
 
-  homeButtonText: {
-    color: "#374151",
+  backButtonText: {
+    color: "#6B7280",
     fontWeight: "800",
   },
 });
