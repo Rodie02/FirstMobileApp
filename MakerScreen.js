@@ -5,229 +5,103 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
+  SafeAreaView,
 } from "react-native";
 
-export default function MakerScreen({ navigation, route }) {
+export default function MakerScreen({ navigation, onCreateQuiz }) {
   const [questionType, setQuestionType] = useState("Multiple Choice");
   const [question, setQuestion] = useState("");
-
   const [choiceA, setChoiceA] = useState("");
   const [choiceB, setChoiceB] = useState("");
   const [choiceC, setChoiceC] = useState("");
   const [choiceD, setChoiceD] = useState("");
-
   const [correctAnswer, setCorrectAnswer] = useState("");
 
-  const questionTypes = [
-    "Multiple Choice",
-    "Identification",
-    "Enumeration",
-    "Essay",
-  ];
-
   const postQuestion = () => {
-    if (!question.trim()) {
+    if (question.trim() === "") {
       alert("Please enter a question.");
       return;
     }
 
     if (questionType === "Multiple Choice") {
       if (
-        !choiceA.trim() ||
-        !choiceB.trim() ||
-        !choiceC.trim() ||
-        !choiceD.trim()
+        choiceA.trim() === "" ||
+        choiceB.trim() === "" ||
+        choiceC.trim() === "" ||
+        choiceD.trim() === ""
       ) {
-        alert("Please complete all four choices.");
+        alert("Please enter all four choices.");
         return;
       }
 
-      if (!correctAnswer) {
+      if (correctAnswer === "") {
         alert("Please select the correct answer.");
         return;
       }
+    } else {
+      if (correctAnswer.trim() === "") {
+        alert("Please enter the correct answer.");
+        return;
+      }
     }
 
-    if (
-      questionType !== "Multiple Choice" &&
-      !correctAnswer.trim()
-    ) {
-      alert("Please enter the correct answer.");
-      return;
-    }
-
-    const newQuiz = {
+    const quiz = {
       type: questionType,
       question: question.trim(),
       choices:
         questionType === "Multiple Choice"
-          ? [choiceA, choiceB, choiceC, choiceD]
+          ? [
+              choiceA.trim(),
+              choiceB.trim(),
+              choiceC.trim(),
+              choiceD.trim(),
+            ]
           : [],
-      correctAnswer: correctAnswer,
+      correctAnswer: correctAnswer.trim(),
     };
 
-    navigation.navigate("Answer", {
-      quiz: newQuiz,
-    });
+    onCreateQuiz(quiz);
+
+    alert("Question posted successfully!");
+
+    navigation.navigate("Answer");
   };
 
-  const renderMultipleChoice = () => {
-    if (questionType !== "Multiple Choice") {
-      return null;
-    }
-
-    const choices = [
-      {
-        label: "A",
-        value: choiceA,
-        setValue: setChoiceA,
-      },
-      {
-        label: "B",
-        value: choiceB,
-        setValue: setChoiceB,
-      },
-      {
-        label: "C",
-        value: choiceC,
-        setValue: setChoiceC,
-      },
-      {
-        label: "D",
-        value: choiceD,
-        setValue: setChoiceD,
-      },
-    ];
-
-    return (
-      <View>
-        <Text style={styles.sectionLabel}>
-          Answer Choices
-        </Text>
-
-        {choices.map((choice) => (
-          <View key={choice.label} style={styles.choiceRow}>
-            <Text style={styles.choiceLabel}>
-              {choice.label}
-            </Text>
-
-            <TextInput
-              style={styles.choiceInput}
-              placeholder={`Choice ${choice.label}`}
-              value={choice.value}
-              onChangeText={choice.setValue}
-            />
-
-            <TouchableOpacity
-              style={[
-                styles.correctButton,
-                correctAnswer === choice.value &&
-                  choice.value.trim() !== "" &&
-                  styles.correctButtonSelected,
-              ]}
-              onPress={() => {
-                if (choice.value.trim()) {
-                  setCorrectAnswer(choice.value);
-                } else {
-                  alert(
-                    `Enter Choice ${choice.label} first.`
-                  );
-                }
-              }}
-            >
-              <Text
-                style={[
-                  styles.correctButtonText,
-                  correctAnswer === choice.value &&
-                    choice.value.trim() !== "" &&
-                    styles.correctButtonTextSelected,
-                ]}
-              >
-                ✓
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-
-        <Text style={styles.helperText}>
-          Tap ✓ beside a choice to mark it as the correct answer.
-        </Text>
-      </View>
-    );
-  };
-
-  const renderAnswerField = () => {
-    if (questionType === "Multiple Choice") {
-      return null;
-    }
-
-    return (
-      <View>
-        <Text style={styles.sectionLabel}>
-          Correct Answer
-        </Text>
-
-        <TextInput
-          style={
-            questionType === "Essay"
-              ? [styles.input, styles.largeInput]
-              : styles.input
-          }
-          placeholder={
-            questionType === "Essay"
-              ? "Enter the expected answer or guide..."
-              : "Enter the correct answer..."
-          }
-          multiline={questionType === "Essay"}
-          textAlignVertical={
-            questionType === "Essay" ? "top" : "center"
-          }
-          value={correctAnswer}
-          onChangeText={setCorrectAnswer}
-        />
-      </View>
-    );
+  const selectCorrectAnswer = (answer) => {
+    setCorrectAnswer(answer);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.navigate("Home")}
         >
-          <Text style={styles.backText}>
-            ‹ Back to Home
-          </Text>
+          <Text style={styles.backText}>‹ Back</Text>
         </TouchableOpacity>
 
-        <View style={styles.headerCard}>
-          <Text style={styles.headerTitle}>
-            Create Quiz
-          </Text>
+        <Text style={styles.title}>Quiz Maker</Text>
 
-          <Text style={styles.headerDescription}>
-            Create a question and post it for the quiz taker.
-          </Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>
-          Question Type
+        <Text style={styles.subtitle}>
+          Create and post your question
         </Text>
 
+        <Text style={styles.label}>Question Type</Text>
+
         <View style={styles.typeContainer}>
-          {questionTypes.map((type) => (
+          {[
+            "Multiple Choice",
+            "Identification",
+            "Enumeration",
+            "Essay",
+          ].map((type) => (
             <TouchableOpacity
               key={type}
               style={[
                 styles.typeButton,
-                questionType === type &&
-                  styles.typeButtonSelected,
+                questionType === type && styles.selectedType,
               ]}
               onPress={() => {
                 setQuestionType(type);
@@ -237,8 +111,7 @@ export default function MakerScreen({ navigation, route }) {
               <Text
                 style={[
                   styles.typeText,
-                  questionType === type &&
-                    styles.typeTextSelected,
+                  questionType === type && styles.selectedTypeText,
                 ]}
               >
                 {type}
@@ -247,22 +120,123 @@ export default function MakerScreen({ navigation, route }) {
           ))}
         </View>
 
-        <Text style={styles.sectionLabel}>
-          Question
-        </Text>
+        <Text style={styles.label}>Question</Text>
 
         <TextInput
-          style={[styles.input, styles.questionInput]}
-          placeholder="Write your question here..."
-          multiline
-          textAlignVertical="top"
+          style={styles.input}
+          placeholder="Enter your question"
           value={question}
           onChangeText={setQuestion}
+          multiline
         />
 
-        {renderMultipleChoice()}
+        {questionType === "Multiple Choice" && (
+          <>
+            <Text style={styles.label}>Choices</Text>
 
-        {renderAnswerField()}
+            <TouchableOpacity
+              style={[
+                styles.choiceRow,
+                correctAnswer === choiceA && choiceA !== "" && styles.correctChoice,
+              ]}
+              onPress={() => selectCorrectAnswer(choiceA)}
+            >
+              <View style={styles.radio}>
+                {correctAnswer === choiceA && choiceA !== "" && (
+                  <Text style={styles.check}>✓</Text>
+                )}
+              </View>
+
+              <TextInput
+                style={styles.choiceInput}
+                placeholder="Choice A"
+                value={choiceA}
+                onChangeText={setChoiceA}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.choiceRow,
+                correctAnswer === choiceB && choiceB !== "" && styles.correctChoice,
+              ]}
+              onPress={() => selectCorrectAnswer(choiceB)}
+            >
+              <View style={styles.radio}>
+                {correctAnswer === choiceB && choiceB !== "" && (
+                  <Text style={styles.check}>✓</Text>
+                )}
+              </View>
+
+              <TextInput
+                style={styles.choiceInput}
+                placeholder="Choice B"
+                value={choiceB}
+                onChangeText={setChoiceB}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.choiceRow,
+                correctAnswer === choiceC && choiceC !== "" && styles.correctChoice,
+              ]}
+              onPress={() => selectCorrectAnswer(choiceC)}
+            >
+              <View style={styles.radio}>
+                {correctAnswer === choiceC && choiceC !== "" && (
+                  <Text style={styles.check}>✓</Text>
+                )}
+              </View>
+
+              <TextInput
+                style={styles.choiceInput}
+                placeholder="Choice C"
+                value={choiceC}
+                onChangeText={setChoiceC}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.choiceRow,
+                correctAnswer === choiceD && choiceD !== "" && styles.correctChoice,
+              ]}
+              onPress={() => selectCorrectAnswer(choiceD)}
+            >
+              <View style={styles.radio}>
+                {correctAnswer === choiceD && choiceD !== "" && (
+                  <Text style={styles.check}>✓</Text>
+                )}
+              </View>
+
+              <TextInput
+                style={styles.choiceInput}
+                placeholder="Choice D"
+                value={choiceD}
+                onChangeText={setChoiceD}
+              />
+            </TouchableOpacity>
+
+            <Text style={styles.hint}>
+              Tap the circle beside a choice to mark it as correct.
+            </Text>
+          </>
+        )}
+
+        {questionType !== "Multiple Choice" && (
+          <>
+            <Text style={styles.label}>Correct Answer</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Enter the correct answer"
+              value={correctAnswer}
+              onChangeText={setCorrectAnswer}
+              multiline
+            />
+          </>
+        )}
 
         <TouchableOpacity
           style={styles.postButton}
@@ -273,11 +247,6 @@ export default function MakerScreen({ navigation, route }) {
             POST QUESTION
           </Text>
         </TouchableOpacity>
-
-        <Text style={styles.bottomNote}>
-          The posted question will appear on the Quiz Taker
-          screen.
-        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -289,84 +258,68 @@ const styles = StyleSheet.create({
     backgroundColor: "#F4F6FA",
   },
 
-  scrollContent: {
+  content: {
     padding: 20,
-    paddingBottom: 50,
+    paddingBottom: 40,
   },
 
   backButton: {
-    marginBottom: 18,
+    marginBottom: 15,
   },
 
   backText: {
-    fontSize: 14,
+    fontSize: 16,
+    color: "#6B7280",
     fontWeight: "700",
-    color: "#374151",
   },
 
-  headerCard: {
-    backgroundColor: "#111827",
-    borderRadius: 22,
-    padding: 24,
+  title: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: "#111827",
+  },
+
+  subtitle: {
+    color: "#6B7280",
+    marginTop: 5,
     marginBottom: 25,
   },
 
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 26,
-    fontWeight: "900",
-    marginBottom: 7,
-  },
-
-  headerDescription: {
-    color: "#D1D5DB",
-    fontSize: 14,
-    lineHeight: 21,
-  },
-
-  sectionTitle: {
-    fontSize: 19,
+  label: {
+    fontSize: 16,
     fontWeight: "800",
     color: "#111827",
-    marginBottom: 12,
-  },
-
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#374151",
-    marginBottom: 9,
+    marginBottom: 10,
+    marginTop: 12,
   },
 
   typeContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 22,
+    gap: 8,
   },
 
   typeButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 13,
+    borderRadius: 12,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    marginRight: 7,
-    marginBottom: 8,
   },
 
-  typeButtonSelected: {
+  selectedType: {
     backgroundColor: "#111827",
     borderColor: "#111827",
   },
 
   typeText: {
-    color: "#4B5563",
-    fontSize: 13,
-    fontWeight: "600",
+    color: "#374151",
+    fontWeight: "700",
+    fontSize: 12,
   },
 
-  typeTextSelected: {
+  selectedTypeText: {
     color: "#FFFFFF",
   },
 
@@ -374,101 +327,72 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 13,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
+    borderRadius: 14,
+    padding: 15,
     fontSize: 15,
     color: "#111827",
-    marginBottom: 16,
-  },
-
-  questionInput: {
-    minHeight: 110,
-  },
-
-  largeInput: {
-    minHeight: 150,
+    minHeight: 55,
   },
 
   choiceRow: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    padding: 8,
+    marginBottom: 10,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
   },
 
-  choiceLabel: {
+  correctChoice: {
+    borderColor: "#111827",
+    borderWidth: 2,
+  },
+
+  radio: {
     width: 30,
-    fontSize: 15,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: "#9CA3AF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+
+  check: {
+    fontSize: 18,
     fontWeight: "900",
     color: "#111827",
   },
 
   choiceInput: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 13,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
+    padding: 10,
+    fontSize: 15,
     color: "#111827",
-    marginRight: 8,
   },
 
-  correctButton: {
-    width: 43,
-    height: 43,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  correctButtonSelected: {
-    backgroundColor: "#059669",
-    borderColor: "#059669",
-  },
-
-  correctButtonText: {
-    color: "#9CA3AF",
-    fontSize: 18,
-    fontWeight: "900",
-  },
-
-  correctButtonTextSelected: {
-    color: "#FFFFFF",
-  },
-
-  helperText: {
-    fontSize: 12,
+  hint: {
     color: "#6B7280",
-    lineHeight: 18,
-    marginBottom: 20,
+    fontSize: 12,
+    marginTop: 2,
+    marginBottom: 15,
   },
 
   postButton: {
     backgroundColor: "#111827",
-    borderRadius: 14,
     paddingVertical: 17,
+    borderRadius: 15,
     alignItems: "center",
-    marginTop: 5,
+    marginTop: 25,
   },
 
   postButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "900",
     letterSpacing: 1,
-  },
-
-  bottomNote: {
-    textAlign: "center",
-    color: "#9CA3AF",
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 14,
   },
 });
