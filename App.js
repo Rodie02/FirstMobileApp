@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ActivityIndicator, Alert, View } from "react-native";
 
 import HomeScreen from "./HomeScreen";
 import MakerScreen from "./MakerScreen";
@@ -15,7 +16,7 @@ const ANSWER_STORAGE_KEY = "@submitted_answer";
 
 export default function App() {
   const [quiz, setQuiz] = useState(null);
-  const [submittedAnswer, setSubmittedAnswer] = useState("");
+  const [submittedAnswer, setSubmittedAnswer] = useState({});
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -32,10 +33,10 @@ export default function App() {
       }
 
       if (savedAnswer) {
-        setSubmittedAnswer(savedAnswer);
+        setSubmittedAnswer(JSON.parse(savedAnswer));
       }
     } catch (error) {
-      console.log("Error loading saved data:", error);
+      Alert.alert("Error", "Could not load your saved data.");
     } finally {
       setIsLoaded(true);
     }
@@ -51,7 +52,7 @@ export default function App() {
       await AsyncStorage.removeItem(ANSWER_STORAGE_KEY);
 
       setQuiz(newQuiz);
-      setSubmittedAnswer("");
+      setSubmittedAnswer({});
     } catch (error) {
       console.log("Error saving quiz:", error);
     }
@@ -60,13 +61,13 @@ export default function App() {
   const submitAnswer = async (answer) => {
     try {
       await AsyncStorage.setItem(
-        ANSWER_STORAGE_KEY,
-        answer
-      );
+      ANSWER_STORAGE_KEY,
+       JSON.stringify(answer)
+    );
 
       setSubmittedAnswer(answer);
     } catch (error) {
-      console.log("Error saving answer:", error);
+      Alert.alert("Error", "Could not save your answer.");
     }
   };
 
@@ -76,15 +77,19 @@ export default function App() {
       await AsyncStorage.removeItem(ANSWER_STORAGE_KEY);
 
       setQuiz(null);
-      setSubmittedAnswer("");
+      setSubmittedAnswer({});
     } catch (error) {
       console.log("Error deleting quiz:", error);
     }
   };
 
-  if (!isLoaded) {
-    return null;
-  }
+if (!isLoaded) {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <ActivityIndicator size="large" color="#111827" />
+    </View>
+  );
+}
 
   return (
     <NavigationContainer>
@@ -132,4 +137,4 @@ export default function App() {
       </Stack.Navigator>
     </NavigationContainer>
   );
-}
+} 
