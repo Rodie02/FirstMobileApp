@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from "react-native";
 
 export default function ResultsScreen({
@@ -117,12 +118,25 @@ export default function ResultsScreen({
         )
       : 0;
 
+  // Asks for confirmation before deleting the quiz and saved answers
   const deleteQuiz = () => {
-    if (onDeleteQuiz) {
-      onDeleteQuiz();
-    }
-
-    navigation.navigate("Home");
+    Alert.alert(
+      "Delete quiz?",
+      "This removes the quiz and all submitted answers.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            if (onDeleteQuiz) {
+              onDeleteQuiz();
+            }
+            navigation.navigate("Home");
+          },
+        },
+      ]
+    );
   };
 
   return (
