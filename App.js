@@ -54,7 +54,7 @@ export default function App() {
       setQuiz(newQuiz);
       setSubmittedAnswer({});
     } catch (error) {
-      console.log("Error saving quiz:", error);
+      Alert.alert("Error", "Could not save your quiz.");
     }
   };
 
@@ -79,7 +79,7 @@ export default function App() {
       setQuiz(null);
       setSubmittedAnswer({});
     } catch (error) {
-      console.log("Error deleting quiz:", error);
+      Alert.alert("Error", "Could not delete your quiz.");
     }
   };
 
