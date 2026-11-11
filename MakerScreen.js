@@ -23,6 +23,122 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
     createEmptyQuestion(),
   ]);
 
+    // API state: loading spinner and error message
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState(null);
+
+  // Fetches 5 multiple-choice questions from Open Trivia DB
+  const importQuestions = async () => {
+    setIsImporting(true);
+    setImportError(null);
+
+    try {
+      const response = await fetch(
+        "https://opentdb.com/api.php?amount=5&type=multiple&encode=url3986"
+      );
+
+      if (!response.ok) {
+        throw new Error("Server error. Please try again.");
+      }
+
+      const data = await response.json();
+
+      // response_code 0 means success
+      if (data.response_code !== 0) {
+        throw new Error("No questions returned. Wait a few seconds and try again.");
+      }
+
+      const imported = data.results.map((item) => {
+        const correct = decodeURIComponent(item.correct_answer);
+        const choices = [
+          ...item.incorrect_answers.map(decodeURIComponent),
+          correct,
+        ].sort(() => Math.random() - 0.5); // shuffle choices
+
+        return {
+          id: Date.now() + Math.random(),
+          type: "Multiple Choice",
+          question: decodeURIComponent(item.question),
+          choices,
+          correctAnswer: correct,
+        };
+      });
+
+      // Keep the questions the maker already filled in, then add the imported ones
+      setQuestions((current) => [
+        ...current.filter((q) => q.question.trim() !== ""),
+        ...imported,
+      ]);
+
+      if (quizTitle.trim() === "") {
+        setQuizTitle("Trivia Quiz");
+      }
+    } catch (error) {
+      setImportError(
+        error.message === "Network request failed"
+          ? "No internet connection."
+          : error.message
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  
+    // API state: loading spinner and error message
+
+  // Fetches 5 multiple-choice questions from Open Trivia DB
+
+    try {
+      const response = await fetch(
+        "https://opentdb.com/api.php?amount=5&type=multiple&encode=url3986"
+      );
+
+      if (!response.ok) {
+        throw new Error("Server error. Please try again.");
+      }
+
+      const data = await response.json();
+
+      // response_code 0 means success
+      if (data.response_code !== 0) {
+        throw new Error("No questions returned. Wait a few seconds and try again.");
+      }
+
+      const imported = data.results.map((item) => {
+        const correct = decodeURIComponent(item.correct_answer);
+        const choices = [
+          ...item.incorrect_answers.map(decodeURIComponent),
+          correct,
+        ].sort(() => Math.random() - 0.5); // shuffle choices
+
+        return {
+          id: Date.now() + Math.random(),
+          type: "Multiple Choice",
+          question: decodeURIComponent(item.question),
+          choices,
+          correctAnswer: correct,
+        };
+      });
+
+      // Keep the questions the maker already filled in, then add the imported ones
+      setQuestions((current) => [
+        ...current.filter((q) => q.question.trim() !== ""),
+        ...imported,
+      ]);
+
+      if (quizTitle.trim() === "") {
+        setQuizTitle("Trivia Quiz");
+      }
+    } catch (error) {
+      setImportError(
+        error.message === "Network request failed"
+          ? "No internet connection."
+          : error.message
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const questionTypes = [
     "Multiple Choice",
     "Identification",
@@ -400,7 +516,24 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
             )}
           </View>
         ))}
+        <TouchableOpacity
+          style={styles.importButton}
+          onPress={importQuestions}
+          disabled={isImporting}
+          activeOpacity={0.8}
+        >
+          {isImporting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.importButtonText}>
+              IMPORT 5 QUESTIONS FROM API
+            </Text>
+          )}
+        </TouchableOpacity>
 
+        {importError && (
+          <Text style={styles.errorText}>{importError}</Text>
+        )}
         <TouchableOpacity
           style={styles.addButton}
           onPress={addQuestion}
@@ -655,5 +788,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     marginTop: 15,
+  },
+
+    importButton: {
+    backgroundColor: "#047857",
+    paddingVertical: 16,
+    borderRadius: 15,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  importButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
+  errorText: {
+    color: "#DC2626",
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 10,
   },
 });
