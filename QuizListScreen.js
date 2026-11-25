@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { formatDate } from "./helpers";
+import { formatDate } from "./Helpers";
 
 export default function QuizListScreen({ navigation }) {
   const { quizzes, attempts, deleteQuiz } = useQuiz();
