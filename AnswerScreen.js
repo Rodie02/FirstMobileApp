@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,31 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from "react-native";
+import { useQuiz } from "./QuizContext";
+import { scoreQuiz, formatTime } from "./helpers";
 
-export default function AnswerScreen({
-  navigation,
-  quiz,
-  onSubmitAnswer,
-}) {
+export default function AnswerScreen({ navigation, route }) {
+  // Which quiz? It arrives as a route param: navigation.navigate("Answer", { quizId })
+  const { quizId } = route.params || {};
+  const { getQuizById, saveAttempt } = useQuiz();
+  const quiz = getQuizById(quizId);
+
   const [answers, setAnswers] = useState({});
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // COMPONENT LIFECYCLE
+  //  Mounting   -> the screen opens, the timer starts
+  //  Updating   -> every second setElapsedSeconds() re-renders the screen
+  //  Unmounting -> the cleanup function stops the timer so it doesn't leak
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setElapsedSeconds((seconds) => seconds + 1);
+    }, 1000);
+
+    return () => clearInterval(timerId); // cleanup = Unmounting phase
+  }, []);
 
   if (!quiz) {
     return (
@@ -23,12 +40,12 @@ export default function AnswerScreen({
           <Text style={styles.emptyTitle}>No Quiz Available</Text>
 
           <Text style={styles.emptyText}>
-            Please create a quiz first.
+            This quiz was not found. It may have been deleted.
           </Text>
 
           <TouchableOpacity
             style={styles.button}
-            onPress={() => navigation.navigate("Maker")}
+            onPress={() => navigation.navigate("Create")}
           >
             <Text style={styles.buttonText}>
               CREATE QUIZ
@@ -37,10 +54,10 @@ export default function AnswerScreen({
 
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.navigate("Home")}
+            onPress={() => navigation.navigate("Quizzes")}
           >
             <Text style={styles.backButtonText}>
-              BACK TO HOME
+              BACK TO QUIZZES
             </Text>
           </TouchableOpacity>
         </View>
@@ -63,16 +80,39 @@ export default function AnswerScreen({
     );
 
     if (unanswered) {
-      alert("Please answer all questions before submitting.");
+      Alert.alert("Incomplete", "Please answer all questions before submitting.");
       return;
     }
 
-    onSubmitAnswer(answers);
+    // Score now and save the result. The attempt keeps its own copy of the
+    // questions, so History still works even if the quiz is edited or deleted later.
+    const { correctCount, totalQuestions, percentage } = scoreQuiz(
+      quiz.questions,
+      answers
+    );
 
-    navigation.navigate("Results", {
+    const attempt = {
+      id: Date.now().toString(),
+      quizId: quiz.id,
+      quizTitle: quiz.title,
+      questions: quiz.questions,
       answers,
-    });
+      correctCount,
+      totalQuestions,
+      percentage,
+      durationSeconds: elapsedSeconds,
+      submittedAt: new Date().toISOString(),
+    };
+
+    saveAttempt(attempt); // Context -> state -> AsyncStorage
+
+    // replace() so pressing Back doesn't return to an already-submitted quiz
+    navigation.replace("Results", { attemptId: attempt.id });
   };
+
+  const answeredCount = Object.values(answers).filter(
+    (value) => String(value).trim() !== ""
+  ).length;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -81,7 +121,7 @@ export default function AnswerScreen({
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
-          onPress={() => navigation.navigate("Home")}
+          onPress={() => navigation.goBack()}
         >
           <Text style={styles.backText}>‹ Back</Text>
         </TouchableOpacity>
@@ -91,6 +131,16 @@ export default function AnswerScreen({
         <Text style={styles.subtitle}>
           Answer all questions.
         </Text>
+
+        <View style={styles.statusRow}>
+          <Text style={styles.statusText}>
+            ⏱ {formatTime(elapsedSeconds)}
+          </Text>
+
+          <Text style={styles.statusText}>
+            {answeredCount} / {quiz.questions.length} answered
+          </Text>
+        </View>
 
         {quiz.questions.map((question, index) => (
           <View
@@ -471,5 +521,23 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: "#6B7280",
     fontWeight: "800",
+  },
+
+  statusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+
+  statusText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#111827",
   },
 });
