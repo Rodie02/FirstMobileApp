@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,35 +7,121 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import { useQuiz } from "./QuizContext";
 
-export default function MakerScreen({ navigation, onCreateQuiz }) {
-  const createEmptyQuestion = () => ({
-    id: Date.now() + Math.random(),
-    type: "Multiple Choice",
-    question: "",
-    choices: ["", "", "", ""],
-    correctAnswer: "",
-  });
+const createEmptyQuestion = () => ({
+  id: `${Date.now()}-${Math.random()}`,
+  type: "Multiple Choice",
+  question: "",
+  choices: ["", "", "", ""],
+  correctAnswer: "",
+});
+
+// Fisher-Yates shuffle (fair random order)
+const shuffle = (array) => {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
+
+export default function MakerScreen({ navigation, route }) {
+  const { addQuiz, updateQuiz, getQuizById } = useQuiz();
+
+  // EDIT MODE: the Quizzes tab sends navigation.navigate("Create", { quizId })
+  const editingId = route.params?.quizId;
+  const isEditing = Boolean(editingId);
 
   const [quizTitle, setQuizTitle] = useState("");
-  const [questions, setQuestions] = useState([
-    createEmptyQuestion(),
-  ]);
+  const [questions, setQuestions] = useState([createEmptyQuestion()]);
 
-    // API state: loading spinner and error message
+  // API state (data fetching + loading/error handling)
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState(0); // 0 = any
+  const [amount, setAmount] = useState(5);
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState(null);
 
-  // Fetches 5 multiple-choice questions from Open Trivia DB
+  const resetForm = () => {
+    setQuizTitle("");
+    setQuestions([createEmptyQuestion()]);
+    setImportError(null);
+  };
+
+  // LIFECYCLE + DEPENDENCY ARRAY [editingId]
+  // Tabs stay mounted, so this screen is NOT recreated when you tap EDIT.
+  // Instead the route param changes and this effect runs again (Update phase).
+  useEffect(() => {
+    if (editingId) {
+      const quiz = getQuizById(editingId);
+
+      if (quiz) {
+        setQuizTitle(quiz.title);
+        setQuestions(quiz.questions.map((q) => ({ ...q })));
+      }
+    } else {
+      resetForm();
+    }
+  }, [editingId]);
+
+  // DATA FETCHING ON MOUNT (empty array [] = run once)
+  // Loads the category list from Open Trivia DB for the picker.
+  useEffect(() => {
+    let cancelled = false; // so we don't set state after the screen unmounts
+
+    const loadCategories = async () => {
+      try {
+        const response = await fetch("https://opentdb.com/api_category.php");
+
+        if (!response.ok) {
+          throw new Error("Server error");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setCategories(data.trivia_categories);
+        }
+      } catch (error) {
+        // Not fatal: the import button still works with "Any category"
+        console.log("Could not load categories:", error.message);
+      } finally {
+        if (!cancelled) {
+          setCategoriesLoading(false);
+        }
+      }
+    };
+
+    loadCategories();
+
+    return () => {
+      cancelled = true; // cleanup (Unmounting)
+    };
+  }, []);
+
+  // Fetches questions from Open Trivia DB using async/await
   const importQuestions = async () => {
     setIsImporting(true);
     setImportError(null);
 
     try {
-      const response = await fetch(
-        "https://opentdb.com/api.php?amount=5&type=multiple&encode=url3986"
-      );
+      let url = `https://opentdb.com/api.php?amount=${amount}&type=multiple&encode=url3986`;
+
+      if (selectedCategory !== 0) {
+        url += `&category=${selectedCategory}`;
+      }
+
+      const response = await fetch(url);
+
+      if (response.status === 429) {
+        throw new Error("Too many requests. Wait 5 seconds and try again.");
+      }
 
       if (!response.ok) {
         throw new Error("Server error. Please try again.");
@@ -45,73 +131,20 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
 
       // response_code 0 means success
       if (data.response_code !== 0) {
-        throw new Error("No questions returned. Wait a few seconds and try again.");
+        throw new Error(
+          "Not enough questions for that category. Try a different one."
+        );
       }
 
       const imported = data.results.map((item) => {
         const correct = decodeURIComponent(item.correct_answer);
-        const choices = [
+        const choices = shuffle([
           ...item.incorrect_answers.map(decodeURIComponent),
           correct,
-        ].sort(() => Math.random() - 0.5); // shuffle choices
+        ]);
 
         return {
-          id: Date.now() + Math.random(),
-          type: "Multiple Choice",
-          question: decodeURIComponent(item.question),
-          choices,
-          correctAnswer: correct,
-        };
-      });
-
-      // Keep the questions the maker already filled in, then add the imported ones
-      setQuestions((current) => [
-        ...current.filter((q) => q.question.trim() !== ""),
-        ...imported,
-      ]);
-
-      if (quizTitle.trim() === "") {
-        setQuizTitle("Trivia Quiz");
-      }
-    } catch (error) {
-      setImportError(
-        error.message === "Network request failed"
-          ? "No internet connection."
-          : error.message
-      );
-    } finally {
-      setIsImporting(false);
-    }
-  
-    // API state: loading spinner and error message
-
-  // Fetches 5 multiple-choice questions from Open Trivia DB
-
-    try {
-      const response = await fetch(
-        "https://opentdb.com/api.php?amount=5&type=multiple&encode=url3986"
-      );
-
-      if (!response.ok) {
-        throw new Error("Server error. Please try again.");
-      }
-
-      const data = await response.json();
-
-      // response_code 0 means success
-      if (data.response_code !== 0) {
-        throw new Error("No questions returned. Wait a few seconds and try again.");
-      }
-
-      const imported = data.results.map((item) => {
-        const correct = decodeURIComponent(item.correct_answer);
-        const choices = [
-          ...item.incorrect_answers.map(decodeURIComponent),
-          correct,
-        ].sort(() => Math.random() - 0.5); // shuffle choices
-
-        return {
-          id: Date.now() + Math.random(),
+          id: `${Date.now()}-${Math.random()}`,
           type: "Multiple Choice",
           question: decodeURIComponent(item.question),
           choices,
@@ -261,27 +294,48 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
       }
     }
 
-    const quiz = {
-      id: Date.now().toString(),
-      title: quizTitle.trim(),
-      questions: questions.map((item, index) => ({
-        id: item.id,
-        number: index + 1,
-        type: item.type,
-        question: item.question.trim(),
-        choices:
-          item.type === "Multiple Choice"
-            ? item.choices.map((choice) => choice.trim())
-            : [],
-        correctAnswer: item.correctAnswer.trim(),
-      })),
-    };
+    const cleanedQuestions = questions.map((item, index) => ({
+      id: item.id,
+      number: index + 1,
+      type: item.type,
+      question: item.question.trim(),
+      choices:
+        item.type === "Multiple Choice"
+          ? item.choices.map((choice) => choice.trim())
+          : [],
+      correctAnswer: item.correctAnswer.trim(),
+    }));
 
-    onCreateQuiz(quiz);
+    if (isEditing) {
+      // UPDATE
+      updateQuiz(editingId, {
+        title: quizTitle.trim(),
+        questions: cleanedQuestions,
+      });
+    } else {
+      // CREATE
+      addQuiz({
+        id: Date.now().toString(),
+        title: quizTitle.trim(),
+        questions: cleanedQuestions,
+        createdAt: new Date().toISOString(),
+      });
+    }
 
-    alert("Quiz posted successfully!");
+    resetForm();
+    navigation.setParams({ quizId: undefined }); // leave edit mode
+    navigation.navigate("Quizzes");
 
-    navigation.navigate("Answer");
+    Alert.alert(
+      "Success",
+      isEditing ? "Quiz updated!" : "Quiz posted successfully!"
+    );
+  };
+
+  const cancelEdit = () => {
+    resetForm();
+    navigation.setParams({ quizId: undefined });
+    navigation.navigate("Quizzes");
   };
 
   return (
@@ -297,11 +351,23 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
           <Text style={styles.backText}>‹ Back</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>Quiz Maker</Text>
+        <Text style={styles.title}>{isEditing ? "Edit Quiz" : "Quiz Maker"}</Text>
 
         <Text style={styles.subtitle}>
           Create a quiz with multiple questions.
         </Text>
+
+        {isEditing && (
+          <View style={styles.editBanner}>
+            <Text style={styles.editBannerText}>
+              You are editing an existing quiz.
+            </Text>
+
+            <TouchableOpacity onPress={cancelEdit}>
+              <Text style={styles.editCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.titleCard}>
           <Text style={styles.label}>QUIZ TITLE</Text>
@@ -516,24 +582,93 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
             )}
           </View>
         ))}
-        <TouchableOpacity
-          style={styles.importButton}
-          onPress={importQuestions}
-          disabled={isImporting}
-          activeOpacity={0.8}
-        >
-          {isImporting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.importButtonText}>
-              IMPORT 5 QUESTIONS FROM API
-            </Text>
-          )}
-        </TouchableOpacity>
+        {/* IMPORT FROM API */}
+        <View style={styles.apiCard}>
+          <Text style={styles.label}>IMPORT FROM OPEN TRIVIA DB</Text>
 
-        {importError && (
-          <Text style={styles.errorText}>{importError}</Text>
-        )}
+          <Text style={styles.hint}>Category</Text>
+
+          {categoriesLoading ? (
+            <ActivityIndicator color="#111827" />
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipRow}
+            >
+              <TouchableOpacity
+                style={[styles.chip, selectedCategory === 0 && styles.chipSelected]}
+                onPress={() => setSelectedCategory(0)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    selectedCategory === 0 && styles.chipTextSelected,
+                  ]}
+                >
+                  Any
+                </Text>
+              </TouchableOpacity>
+
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.chip,
+                    selectedCategory === category.id && styles.chipSelected,
+                  ]}
+                  onPress={() => setSelectedCategory(category.id)}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedCategory === category.id && styles.chipTextSelected,
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          <Text style={[styles.hint, { marginTop: 12 }]}>How many questions</Text>
+
+          <View style={styles.chipRow}>
+            {[5, 10].map((count) => (
+              <TouchableOpacity
+                key={count}
+                style={[styles.chip, amount === count && styles.chipSelected]}
+                onPress={() => setAmount(count)}
+              >
+                <Text
+                  style={[styles.chipText, amount === count && styles.chipTextSelected]}
+                >
+                  {count}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={styles.importButton}
+            onPress={importQuestions}
+            disabled={isImporting}
+            activeOpacity={0.8}
+          >
+            {isImporting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.importButtonText}>
+                IMPORT {amount} QUESTIONS FROM API
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {importError && (
+            <Text style={styles.errorText}>{importError}</Text>
+          )}
+        </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={addQuestion}
@@ -550,7 +685,7 @@ export default function MakerScreen({ navigation, onCreateQuiz }) {
           activeOpacity={0.8}
         >
           <Text style={styles.postButtonText}>
-            POST QUIZ
+            {isEditing ? "SAVE CHANGES" : "POST QUIZ"}
           </Text>
         </TouchableOpacity>
 
@@ -790,12 +925,12 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
 
-    importButton: {
+  importButton: {
     backgroundColor: "#047857",
     paddingVertical: 16,
     borderRadius: 15,
     alignItems: "center",
-    marginBottom: 10,
+    marginTop: 14,
   },
 
   importButtonText: {
@@ -810,5 +945,65 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 10,
+  },
+
+  apiCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  chipRow: {
+    flexDirection: "row",
+    gap: 7,
+  },
+
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 11,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  chipSelected: {
+    backgroundColor: "#047857",
+    borderColor: "#047857",
+  },
+
+  chipText: {
+    color: "#374151",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+
+  chipTextSelected: {
+    color: "#FFFFFF",
+  },
+
+  editBanner: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 15,
+  },
+
+  editBannerText: {
+    color: "#92400E",
+    fontWeight: "800",
+    fontSize: 13,
+  },
+
+  editCancelText: {
+    color: "#B91C1C",
+    fontWeight: "900",
+    fontSize: 13,
   },
 });
