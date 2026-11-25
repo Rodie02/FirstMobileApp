@@ -1,4 +1,5 @@
 import React from "react";
+import { useQuiz } from "./QuizContext";
 import {
   View,
   Text,
@@ -9,6 +10,16 @@ import {
 } from "react-native";
 
 export default function HomeScreen({ navigation }) {
+  // Global state from Context. Whenever quizzes/attempts change, this screen re-renders (Update phase).
+  const { quizzes, attempts } = useQuiz();
+
+  const averageScore =
+    attempts.length > 0
+      ? Math.round(
+          attempts.reduce((sum, a) => sum + a.percentage, 0) / attempts.length
+        )
+      : null;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -45,6 +56,26 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
 
+        {/* Live stats from Context */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{quizzes.length}</Text>
+            <Text style={styles.statLabel}>Quizzes</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{attempts.length}</Text>
+            <Text style={styles.statLabel}>Attempts</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>
+              {averageScore === null ? "-" : `${averageScore}%`}
+            </Text>
+            <Text style={styles.statLabel}>Avg Score</Text>
+          </View>
+        </View>
+
         {/* Choose Role */}
         <Text style={styles.sectionTitle}>
           Choose Your Role
@@ -54,7 +85,7 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity
           style={styles.roleCard}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate("Maker")}
+          onPress={() => navigation.navigate("Create")}
         >
           <View style={styles.roleIcon}>
             <Text style={styles.roleIconText}>+</Text>
@@ -77,7 +108,7 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity
           style={styles.roleCard}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate("Answer")}
+          onPress={() => navigation.navigate("Quizzes")}
         >
           <View style={styles.roleIcon}>
             <Text style={styles.roleIconText}>✓</Text>
@@ -89,7 +120,7 @@ export default function HomeScreen({ navigation }) {
             </Text>
 
             <Text style={styles.roleDescription}>
-              Answer questions posted by the quiz maker.
+              Pick a quiz and answer it. Your time is recorded.
             </Text>
           </View>
 
@@ -100,7 +131,7 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity
           style={styles.resultCard}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate("Results")}
+          onPress={() => navigation.navigate("History")}
         >
           <View style={styles.resultIcon}>
             <Text style={styles.resultIconText}>✓</Text>
@@ -112,7 +143,7 @@ export default function HomeScreen({ navigation }) {
             </Text>
 
             <Text style={styles.resultDescription}>
-              View the answers submitted by the quiz taker.
+              Review your past attempts and scores.
             </Text>
           </View>
 
@@ -327,5 +358,34 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 15,
     letterSpacing: 1,
+  },
+
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 24,
+  },
+
+  statCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  statNumber: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#111827",
+  },
+
+  statLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#6B7280",
+    marginTop: 3,
   },
 });
