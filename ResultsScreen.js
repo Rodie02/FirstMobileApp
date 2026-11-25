@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { scoreQuiz, formatTime, formatDate } from "./helpers";
+import { scoreQuiz, formatTime, formatDate } from "./Helpers";
 
 export default function ResultsScreen({ navigation, route }) {
   // Which attempt? It arrives as a route param: navigation.navigate("Results", { attemptId })
