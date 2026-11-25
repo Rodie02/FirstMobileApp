@@ -8,20 +8,16 @@ import {
   SafeAreaView,
   Alert,
 } from "react-native";
+import { useQuiz } from "./QuizContext";
+import { scoreQuiz, formatTime, formatDate } from "./helpers";
 
-export default function ResultsScreen({
-  navigation,
-  quiz,
-  submittedAnswer,
-  route,
-  onDeleteQuiz,
-}) {
-  const answersFromRoute = route?.params?.answers;
+export default function ResultsScreen({ navigation, route }) {
+  // Which attempt? It arrives as a route param: navigation.navigate("Results", { attemptId })
+  const { attemptId } = route.params || {};
+  const { getAttemptById, getQuizById, deleteAttempt } = useQuiz();
+  const attempt = getAttemptById(attemptId);
 
-  const answers =
-    answersFromRoute || submittedAnswer || {};
-
-  if (!quiz) {
+  if (!attempt) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
@@ -30,15 +26,15 @@ export default function ResultsScreen({
           </Text>
 
           <Text style={styles.emptyText}>
-            Please create and answer a quiz first.
+            This result was not found. It may have been deleted.
           </Text>
 
           <TouchableOpacity
             style={styles.homeButton}
-            onPress={() => navigation.navigate("Home")}
+            onPress={() => navigation.navigate("History")}
           >
             <Text style={styles.homeButtonText}>
-              BACK TO HOME
+              BACK TO HISTORY
             </Text>
           </TouchableOpacity>
         </View>
@@ -46,93 +42,32 @@ export default function ResultsScreen({
     );
   }
 
-  const normalizeAnswer = (answer) => {
-    return String(answer || "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
+  // Re-check the saved answers against the saved questions
+  const { results, correctCount, totalQuestions, percentage } = scoreQuiz(
+    attempt.questions,
+    attempt.answers
+  );
+
+  // Retake is only possible if the quiz still exists
+  const quizStillExists = Boolean(getQuizById(attempt.quizId));
+
+  const retakeQuiz = () => {
+    navigation.replace("Answer", { quizId: attempt.quizId });
   };
 
-  const checkAnswer = (question, userAnswer) => {
-    const user = normalizeAnswer(userAnswer);
-    const correct = normalizeAnswer(
-      question.correctAnswer
-    );
-
-    if (!user) {
-      return false;
-    }
-
-    if (question.type === "Enumeration") {
-      const userItems = user
-        .split(",")
-        .map((item) => item.trim())
-        .filter((item) => item !== "");
-
-      const correctItems = correct
-        .split(",")
-        .map((item) => item.trim())
-        .filter((item) => item !== "");
-
-      if (userItems.length !== correctItems.length) {
-        return false;
-      }
-
-      const sortedUser = [...userItems].sort();
-      const sortedCorrect = [...correctItems].sort();
-
-      return sortedUser.every(
-        (item, index) =>
-          item === sortedCorrect[index]
-      );
-    }
-
-    return user === correct;
-  };
-
-  const results = quiz.questions.map((question) => {
-    const userAnswer = answers[question.id] || "";
-
-    const isCorrect = checkAnswer(
-      question,
-      userAnswer
-    );
-
-    return {
-      ...question,
-      userAnswer,
-      isCorrect,
-    };
-  });
-
-  const correctCount = results.filter(
-    (item) => item.isCorrect
-  ).length;
-
-  const totalQuestions = results.length;
-
-  const percentage =
-    totalQuestions > 0
-      ? Math.round(
-          (correctCount / totalQuestions) * 100
-        )
-      : 0;
-
-  // Asks for confirmation before deleting the quiz and saved answers
-  const deleteQuiz = () => {
+  // DELETE one attempt (with confirmation)
+  const deleteResult = () => {
     Alert.alert(
-      "Delete quiz?",
-      "This removes the quiz and all submitted answers.",
+      "Delete result?",
+      "This removes this attempt from your history.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            if (onDeleteQuiz) {
-              onDeleteQuiz();
-            }
-            navigation.navigate("Home");
+            deleteAttempt(attempt.id);
+            navigation.navigate("History");
           },
         },
       ]
@@ -146,7 +81,7 @@ export default function ResultsScreen({
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
-          onPress={() => navigation.navigate("Home")}
+          onPress={() => navigation.goBack()}
         >
           <Text style={styles.backText}>
             ‹ Back
@@ -158,7 +93,11 @@ export default function ResultsScreen({
         </Text>
 
         <Text style={styles.quizTitle}>
-          {quiz.title}
+          {attempt.quizTitle}
+        </Text>
+
+        <Text style={styles.quizMeta}>
+          {formatDate(attempt.submittedAt)} • ⏱ {formatTime(attempt.durationSeconds)}
         </Text>
 
         <View style={styles.scoreCard}>
@@ -309,6 +248,17 @@ export default function ResultsScreen({
           </View>
         ))}
 
+        {quizStillExists && (
+          <TouchableOpacity
+            style={styles.retakeButton}
+            onPress={retakeQuiz}
+          >
+            <Text style={styles.retakeButtonText}>
+              RETAKE QUIZ
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={styles.homeButton}
           onPress={() => navigation.navigate("Home")}
@@ -320,10 +270,10 @@ export default function ResultsScreen({
 
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={deleteQuiz}
+          onPress={deleteResult}
         >
           <Text style={styles.deleteButtonText}>
-            DELETE QUIZ
+            DELETE THIS RESULT
           </Text>
         </TouchableOpacity>
 
@@ -624,5 +574,30 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginTop: 8,
     marginBottom: 20,
+  },
+
+  quizMeta: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: "700",
+    marginTop: -14,
+    marginBottom: 20,
+  },
+
+  retakeButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#111827",
+    paddingVertical: 16,
+    borderRadius: 15,
+    alignItems: "center",
+    marginTop: 10,
+  },
+
+  retakeButtonText: {
+    color: "#111827",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
 });
