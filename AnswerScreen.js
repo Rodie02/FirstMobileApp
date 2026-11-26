@@ -1,3 +1,15 @@
+// ==============================================================
+// FILE: AnswerScreen.js  (stack screen: Answer)
+// WHAT:  Take a quiz. Has a running timer and a live 'answered' counter.
+//
+// DATA FLOW: Quizzes tab -> navigate('Answer', { quizId }) -> getQuizById(quizId) from Context
+//            typing/tapping -> updateAnswer -> `answers` state -> SUBMIT
+//            -> scoreQuiz() -> saveAttempt() in Context (saved to AsyncStorage)
+//            -> navigation.replace('Results', { attemptId })
+// LIFECYCLE: timer starts on mount, ticks every second (updates), stops on unmount (cleanup)
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -7,12 +19,14 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
-  Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { scoreQuiz, formatTime } from "./helpers";
+import { scoreQuiz, formatTime, showMessage } from "./helpers";
 
 export default function AnswerScreen({ navigation, route }) {
+  // ==============================================================
+  // [STATE] Quiz from route param + Context, the answers, and the timer
+  // ==============================================================
   // Which quiz? It arrives as a route param: navigation.navigate("Answer", { quizId })
   const { quizId } = route.params || {};
   const { getQuizById, saveAttempt } = useQuiz();
@@ -21,6 +35,9 @@ export default function AnswerScreen({ navigation, route }) {
   const [answers, setAnswers] = useState({});
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+  // ==============================================================
+  // [LOGIC] Timer using useEffect (Mounting -> Updating -> Unmounting)
+  // ==============================================================
   // COMPONENT LIFECYCLE
   //  Mounting   -> the screen opens, the timer starts
   //  Updating   -> every second setElapsedSeconds() re-renders the screen
@@ -33,6 +50,9 @@ export default function AnswerScreen({ navigation, route }) {
     return () => clearInterval(timerId); // cleanup = Unmounting phase
   }, []);
 
+  // ==============================================================
+  // [UI] Empty state: shown if the quiz was not found (e.g. deleted)
+  // ==============================================================
   if (!quiz) {
     return (
       <SafeAreaView style={styles.container}>
@@ -45,7 +65,7 @@ export default function AnswerScreen({ navigation, route }) {
 
           <TouchableOpacity
             style={styles.button}
-            onPress={() => navigation.navigate("Create")}
+            onPress={() => navigation.navigate("MainTabs", { screen: "Create" })}
           >
             <Text style={styles.buttonText}>
               CREATE QUIZ
@@ -54,7 +74,7 @@ export default function AnswerScreen({ navigation, route }) {
 
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.navigate("Quizzes")}
+            onPress={() => navigation.navigate("MainTabs", { screen: "Quizzes" })}
           >
             <Text style={styles.backButtonText}>
               BACK TO QUIZZES
@@ -65,6 +85,9 @@ export default function AnswerScreen({ navigation, route }) {
     );
   }
 
+  // ==============================================================
+  // [LOGIC] Save an answer into state, and submit the quiz
+  // ==============================================================
   const updateAnswer = (questionId, answer) => {
     setAnswers((currentAnswers) => ({
       ...currentAnswers,
@@ -72,6 +95,7 @@ export default function AnswerScreen({ navigation, route }) {
     }));
   };
 
+  // [LOGIC] Check everything is answered, score it, save the attempt, open Results
   const submitQuiz = () => {
     const unanswered = quiz.questions.some(
       (question) =>
@@ -80,7 +104,7 @@ export default function AnswerScreen({ navigation, route }) {
     );
 
     if (unanswered) {
-      Alert.alert("Incomplete", "Please answer all questions before submitting.");
+      showMessage("Incomplete", "Please answer all questions before submitting.");
       return;
     }
 
@@ -110,10 +134,14 @@ export default function AnswerScreen({ navigation, route }) {
     navigation.replace("Results", { attemptId: attempt.id });
   };
 
+  // [LOGIC] Derived value: how many questions have an answer (updates as the user types)
   const answeredCount = Object.values(answers).filter(
     (value) => String(value).trim() !== ""
   ).length;
 
+  // ==============================================================
+  // [UI] What the user sees (header, timer, question cards, submit button)
+  // ==============================================================
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -121,7 +149,7 @@ export default function AnswerScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate("MainTabs", { screen: "Quizzes" })}
         >
           <Text style={styles.backText}>‹ Back</Text>
         </TouchableOpacity>
@@ -132,6 +160,7 @@ export default function AnswerScreen({ navigation, route }) {
           Answer all questions.
         </Text>
 
+        {/* [UI] Timer + progress. [LOGIC] elapsedSeconds and answeredCount */}
         <View style={styles.statusRow}>
           <Text style={styles.statusText}>
             ⏱ {formatTime(elapsedSeconds)}
@@ -142,6 +171,7 @@ export default function AnswerScreen({ navigation, route }) {
           </Text>
         </View>
 
+        {/* [UI] One card per question (loops over quiz.questions) */}
         {quiz.questions.map((question, index) => (
           <View
             style={styles.questionCard}
@@ -159,6 +189,7 @@ export default function AnswerScreen({ navigation, route }) {
               {question.question}
             </Text>
 
+            {/* [UI] Choice buttons. [LOGIC] tapping calls updateAnswer() */}
             {question.type === "Multiple Choice" && (
               <View style={styles.choicesContainer}>
                 {question.choices.map(
@@ -226,6 +257,7 @@ export default function AnswerScreen({ navigation, route }) {
               </View>
             )}
 
+            {/* [UI] Text input for Identification */}
             {question.type === "Identification" && (
               <TextInput
                 style={styles.input}
@@ -241,6 +273,7 @@ export default function AnswerScreen({ navigation, route }) {
               />
             )}
 
+            {/* [UI] Text input for Enumeration (comma separated) */}
             {question.type === "Enumeration" && (
               <View>
                 <TextInput
@@ -266,6 +299,7 @@ export default function AnswerScreen({ navigation, route }) {
               </View>
             )}
 
+            {/* [UI] Large text input for Essay */}
             {question.type === "Essay" && (
               <TextInput
                 style={[
@@ -288,6 +322,7 @@ export default function AnswerScreen({ navigation, route }) {
           </View>
         ))}
 
+        {/* [UI] SUBMIT button -> submitQuiz() */}
         <TouchableOpacity
           style={styles.submitButton}
           onPress={submitQuiz}
@@ -309,6 +344,9 @@ export default function AnswerScreen({ navigation, route }) {
   );
 }
 
+// ==============================================================
+// [STYLES] All colors, sizes and spacing for this screen
+// ==============================================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
