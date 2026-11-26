@@ -1,3 +1,12 @@
+// ==============================================================
+// FILE: App.js  (app entry point)
+// WHAT:  Sets up NAVIGATION and wraps the app in the global-state Provider.
+//        The tab bar and the stack are defined here. Screens live in their own files.
+//
+// FLOW:  App -> QuizProvider (global state) -> AppNavigator -> Stack -> MainTabs / Answer / Results
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 // App.js
 // ADVANCED NAVIGATION: Bottom Tabs (main sections) nested inside a Stack
 // (screens that open on top of the tabs).
@@ -15,7 +24,7 @@ import React, { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { ActivityIndicator, Alert, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 
 import { QuizProvider, useQuiz } from "./QuizContext";
 import HomeScreen from "./HomeScreen";
@@ -24,14 +33,23 @@ import MakerScreen from "./MakerScreen";
 import HistoryScreen from "./HistoryScreen";
 import AnswerScreen from "./AnswerScreen";
 import ResultsScreen from "./ResultsScreen";
+import { showMessage } from "./helpers";
 
+// ==============================================================
+// [NAVIGATION] Create the two navigators (Stack = screens on top, Tab = bottom bar)
+// ==============================================================
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// [UI] Small emoji icon shown on each tab
 const tabIcon = (symbol) => ({ focused }) => (
   <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.45 }}>{symbol}</Text>
 );
 
+// ==============================================================
+// [NAVIGATION] Bottom tab bar: Home | Quizzes | Create | History
+//      [UI] Badges on Quizzes/History show counts read from Context
+// ==============================================================
 function MainTabs() {
   // Global state read straight from Context (no props needed)
   const { quizzes, attempts } = useQuiz();
@@ -79,18 +97,22 @@ function MainTabs() {
   );
 }
 
+// ==============================================================
+// [LOGIC] Shows a spinner while AsyncStorage loads, an error popup if storage fails,
+//      then renders the Stack navigator (MainTabs + Answer + Results)
+// ==============================================================
 function AppNavigator() {
   const { isLoading, error, dismissError } = useQuiz();
 
   // Dependency array [error] -> runs only when `error` changes
   useEffect(() => {
     if (error) {
-      Alert.alert("Storage Error", error, [
-        { text: "OK", onPress: dismissError },
-      ]);
+      showMessage("Storage Error", error);
+      dismissError();
     }
   }, [error]);
 
+  // [UI] Loading spinner
   // Loading state while AsyncStorage is being read
   if (isLoading) {
     return (
@@ -111,6 +133,9 @@ function AppNavigator() {
   );
 }
 
+// ==============================================================
+// [LOGIC] Root component: the Provider makes global state available everywhere
+// ==============================================================
 export default function App() {
   // The Provider wraps everything so every screen can use the global state
   return (
