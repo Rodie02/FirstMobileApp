@@ -1,3 +1,11 @@
+// ==============================================================
+// FILE: QuizListScreen.js  (tab: Quizzes)
+// WHAT:  Lists every quiz. Buttons: TAKE (opens Answer), EDIT (opens Create in edit mode), DELETE.
+// DATA FLOW: useQuiz() -> quizzes -> FlatList -> one card per quiz
+//            DELETE -> confirmAction -> deleteQuiz(id) in Context -> list re-renders + AsyncStorage updates
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 // QuizListScreen.js  (Quizzes tab)
 // READ + DELETE of quizzes from Context. Buttons open Answer (stack) or Create (tab, edit mode).
 
@@ -9,30 +17,29 @@ import {
   StyleSheet,
   FlatList,
   SafeAreaView,
-  Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { formatDate } from "./helpers";
+import { formatDate, confirmAction } from "./helpers";
 
 export default function QuizListScreen({ navigation }) {
+  // ==============================================================
+  // [STATE + LOGIC] Global data from Context, and the delete handler
+  // ==============================================================
   const { quizzes, attempts, deleteQuiz } = useQuiz();
 
   const confirmDelete = (quiz) => {
-    Alert.alert(
+    confirmAction(
       "Delete quiz?",
       `"${quiz.title}" will be removed. Your past results stay in History.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteQuiz(quiz.id),
-        },
-      ]
+      () => deleteQuiz(quiz.id)
     );
   };
 
+  // ==============================================================
+  // [UI] One quiz card (FlatList calls this once per quiz)
+  // ==============================================================
   const renderQuiz = ({ item }) => {
+    // [LOGIC] Derived data: how many times this quiz was taken and the best score
     const quizAttempts = attempts.filter((a) => a.quizId === item.id);
     const best =
       quizAttempts.length > 0
@@ -58,6 +65,7 @@ export default function QuizListScreen({ navigation }) {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.takeButton}
+            // [NAVIGATION] open the Answer screen and pass this quiz's id as a route param
             onPress={() => navigation.navigate("Answer", { quizId: item.id })}
           >
             <Text style={styles.takeButtonText}>TAKE</Text>
@@ -65,6 +73,7 @@ export default function QuizListScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.outlineButton}
+            // [NAVIGATION] open the Create tab in EDIT mode by passing quizId
             onPress={() => navigation.navigate("Create", { quizId: item.id })}
           >
             <Text style={styles.outlineButtonText}>EDIT</Text>
@@ -81,6 +90,9 @@ export default function QuizListScreen({ navigation }) {
     );
   };
 
+  // ==============================================================
+  // [UI] The screen: a FlatList of quiz cards
+  // ==============================================================
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
@@ -89,6 +101,7 @@ export default function QuizListScreen({ navigation }) {
         renderItem={renderQuiz}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        // [UI] Title shown above the list
         ListHeaderComponent={
           <View>
             <Text style={styles.title}>Quizzes</Text>
@@ -97,6 +110,7 @@ export default function QuizListScreen({ navigation }) {
             </Text>
           </View>
         }
+        // [UI] Shown when there are no quizzes yet
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyTitle}>No Quizzes Yet</Text>
@@ -117,6 +131,9 @@ export default function QuizListScreen({ navigation }) {
   );
 }
 
+// ==============================================================
+// [STYLES] All colors, sizes and spacing for this screen
+// ==============================================================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F4F6FA" },
   content: { padding: 20, paddingBottom: 40 },
