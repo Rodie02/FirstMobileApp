@@ -13,7 +13,7 @@ import {
   Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { formatDate, formatTime } from "./Helpers";
+import { formatDate, formatTime } from "./helpers";
 
 export default function HistoryScreen({ navigation }) {
   const { attempts, clearAttempts } = useQuiz();

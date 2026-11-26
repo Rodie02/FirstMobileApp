@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { scoreQuiz, formatTime } from "./Helpers";
+import { scoreQuiz, formatTime } from "./helpers";
 
 export default function AnswerScreen({ navigation, route }) {
   // Which quiz? It arrives as a route param: navigation.navigate("Answer", { quizId })
