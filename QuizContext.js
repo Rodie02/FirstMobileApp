@@ -1,3 +1,16 @@
+// ==============================================================
+// FILE: QuizContext.js
+// WHAT:  The app's GLOBAL STATE (Context API) + SAVING to the phone (AsyncStorage).
+//        There is NO UI in this file. Every screen gets its data from here via useQuiz().
+//
+// DATA FLOW:
+//   1. App starts -> Provider mounts -> useEffect([]) READS AsyncStorage -> setQuizzes/setAttempts
+//   2. A screen calls addQuiz / updateQuiz / deleteQuiz / saveAttempt ...
+//   3. That calls a setState -> every screen using useQuiz() re-renders
+//   4. useEffect([quizzes]) / useEffect([attempts]) notices the change -> WRITES to AsyncStorage
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 // QuizContext.js
 // GLOBAL STATE (Context API) + LOCAL DATA PERSISTENCE (AsyncStorage)
 //
@@ -20,11 +33,17 @@ const LEGACY_QUIZ_KEY = "@quiz_data"; // MCO 1 single-quiz key (migrated once)
 const QuizContext = createContext(null);
 
 export function QuizProvider({ children }) {
+  // ==============================================================
+  // [STATE] Global data shared by all screens
+  // ==============================================================
   const [quizzes, setQuizzes] = useState([]); // every quiz the maker created
   const [attempts, setAttempts] = useState([]); // every submitted attempt
   const [isLoading, setIsLoading] = useState(true); // loading state
   const [error, setError] = useState(null); // error state
 
+  // ==============================================================
+  // [LOGIC] LOAD saved data when the app opens (AsyncStorage READ)
+  // ==============================================================
   // ---------- READ (Mounting) ----------
   // Empty dependency array [] -> runs ONCE when the Provider mounts.
   useEffect(() => {
@@ -55,6 +74,9 @@ export function QuizProvider({ children }) {
     loadData();
   }, []);
 
+  // ==============================================================
+  // [LOGIC] AUTO-SAVE whenever quizzes/attempts change (AsyncStorage WRITE)
+  // ==============================================================
   // ---------- SAVE (Updating) ----------
   // Dependency array [quizzes, isLoading] -> runs whenever quizzes changes.
   // Skipped while loading so we never overwrite saved data with an empty array.
@@ -72,6 +94,9 @@ export function QuizProvider({ children }) {
       .catch(() => setError("Could not save your results."));
   }, [attempts, isLoading]);
 
+  // ==============================================================
+  // [LOGIC] CRUD functions that screens call (Create / Update / Delete)
+  // ==============================================================
   // ---------- CRUD: quizzes ----------
   // CREATE
   const addQuiz = (quiz) => {
@@ -105,12 +130,18 @@ export function QuizProvider({ children }) {
 
   const clearAttempts = () => setAttempts([]);
 
+  // ==============================================================
+  // [LOGIC] Lookup helpers (find one quiz / attempt by id)
+  // ==============================================================
   // ---------- Helpers (READ one) ----------
   const getQuizById = (id) => quizzes.find((quiz) => quiz.id === id);
   const getAttemptById = (id) => attempts.find((a) => a.id === id);
 
   const dismissError = () => setError(null);
 
+  // ==============================================================
+  // [LOGIC] Everything below is shared with the whole app through the Provider
+  // ==============================================================
   return (
     <QuizContext.Provider
       value={{
