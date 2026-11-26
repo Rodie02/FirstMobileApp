@@ -1,3 +1,10 @@
+// ==============================================================
+// FILE: HomeScreen.js  (tab: Home)
+// WHAT:  Dashboard. Shows live stats and shortcuts to the other tabs.
+// DATA FLOW: useQuiz() -> quizzes/attempts -> counts + average shown in the stat cards
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 import React from "react";
 import { useQuiz } from "./QuizContext";
 import {
@@ -10,6 +17,9 @@ import {
 } from "react-native";
 
 export default function HomeScreen({ navigation }) {
+  // ==============================================================
+  // [STATE + LOGIC] Read global data and compute the average score
+  // ==============================================================
   // Global state from Context. Whenever quizzes/attempts change, this screen re-renders (Update phase).
   const { quizzes, attempts } = useQuiz();
 
@@ -20,12 +30,16 @@ export default function HomeScreen({ navigation }) {
         )
       : null;
 
+  // ==============================================================
+  // [UI] What the user sees
+  // ==============================================================
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* [UI] Top header with app name and logo */}
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -56,7 +70,7 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
 
-        {/* Live stats from Context */}
+        {/* [UI] Stat cards. [LOGIC] values come from Context (quizzes, attempts, averageScore) */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{quizzes.length}</Text>
@@ -81,7 +95,7 @@ export default function HomeScreen({ navigation }) {
           Choose Your Role
         </Text>
 
-        {/* Quiz Maker */}
+        {/* [UI] Quiz Maker card. [NAVIGATION] goes to the Create tab */}
         <TouchableOpacity
           style={styles.roleCard}
           activeOpacity={0.8}
@@ -104,7 +118,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.arrow}>›</Text>
         </TouchableOpacity>
 
-        {/* Quiz Taker */}
+        {/* [UI] Quiz Taker card. [NAVIGATION] goes to the Quizzes tab */}
         <TouchableOpacity
           style={styles.roleCard}
           activeOpacity={0.8}
@@ -127,7 +141,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.arrow}>›</Text>
         </TouchableOpacity>
 
-        {/* Submitted Answers */}
+        {/* [UI] Submitted Answers card. [NAVIGATION] goes to the History tab */}
         <TouchableOpacity
           style={styles.resultCard}
           activeOpacity={0.8}
@@ -159,6 +173,9 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
+// ==============================================================
+// [STYLES] All colors, sizes and spacing for this screen
+// ==============================================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,5 +1,15 @@
+// ==============================================================
+// FILE: helpers.js
+// WHAT:  Small reusable functions. NO UI and NO React state in this file.
+// USED BY: Answer (scoring, timer format), Results (scoring), History/Quizzes (dates, confirm dialogs).
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 import { Alert, Platform } from "react-native";
 
+// ==============================================================
+// [LOGIC] Cross-platform dialogs (web uses window.confirm, phone uses Alert)
+// ==============================================================
 // Alert.alert() with buttons does NOT work on web, so these two helpers
 // use the browser dialogs on web and the native Alert on phones.
 
@@ -30,6 +40,10 @@ export const showMessage = (title, message) => {
 
 // helpers.js — small pure functions shared by several screens (no React here).
 
+// ==============================================================
+// [LOGIC] Answer checking and scoring
+//      normalizeAnswer -> checkAnswer (one question) -> scoreQuiz (whole quiz)
+// ==============================================================
 export const normalizeAnswer = (answer) =>
   String(answer || "")
     .trim()
@@ -81,6 +95,9 @@ export const scoreQuiz = (questions, answers) => {
   return { results, correctCount, totalQuestions, percentage };
 };
 
+// ==============================================================
+// [LOGIC] Formatting helpers (seconds -> mm:ss, ISO date -> readable)
+// ==============================================================
 // 75 -> "01:15"
 export const formatTime = (totalSeconds = 0) => {
   const minutes = Math.floor(totalSeconds / 60);
