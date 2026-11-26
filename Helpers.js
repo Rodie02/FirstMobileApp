@@ -1,3 +1,33 @@
+import { Alert, Platform } from "react-native";
+
+// Alert.alert() with buttons does NOT work on web, so these two helpers
+// use the browser dialogs on web and the native Alert on phones.
+
+// Yes/No confirmation. Runs onConfirm only if the user agrees.
+export const confirmAction = (title, message, onConfirm, confirmText = "Delete") => {
+  if (Platform.OS === "web") {
+    if (window.confirm(`${title}\n\n${message}`)) {
+      onConfirm();
+    }
+    return;
+  }
+
+  Alert.alert(title, message, [
+    { text: "Cancel", style: "cancel" },
+    { text: confirmText, style: "destructive", onPress: onConfirm },
+  ]);
+};
+
+// Simple message with an OK button
+export const showMessage = (title, message) => {
+  if (Platform.OS === "web") {
+    window.alert(message ? `${title}\n\n${message}` : title);
+    return;
+  }
+
+  Alert.alert(title, message);
+};
+
 // helpers.js — small pure functions shared by several screens (no React here).
 
 export const normalizeAnswer = (answer) =>
