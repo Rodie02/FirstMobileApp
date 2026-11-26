@@ -1,3 +1,13 @@
+// ==============================================================
+// FILE: ResultsScreen.js  (stack screen: Results)
+// WHAT:  Shows the score and a right/wrong review of one submitted attempt.
+//
+// DATA FLOW: navigate('Results', { attemptId }) -> getAttemptById() from Context
+//            -> scoreQuiz(attempt.questions, attempt.answers) -> score cards + review list
+//            DELETE -> confirmAction -> deleteAttempt() in Context -> back to History
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 import React from "react";
 import {
   View,
@@ -6,17 +16,22 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
-  Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { scoreQuiz, formatTime, formatDate } from "./helpers";
+import { scoreQuiz, formatTime, formatDate, confirmAction } from "./helpers";
 
 export default function ResultsScreen({ navigation, route }) {
+  // ==============================================================
+  // [STATE] Attempt from route param + Context
+  // ==============================================================
   // Which attempt? It arrives as a route param: navigation.navigate("Results", { attemptId })
   const { attemptId } = route.params || {};
   const { getAttemptById, getQuizById, deleteAttempt } = useQuiz();
   const attempt = getAttemptById(attemptId);
 
+  // ==============================================================
+  // [UI] Empty state: shown if the attempt was not found (e.g. deleted)
+  // ==============================================================
   if (!attempt) {
     return (
       <SafeAreaView style={styles.container}>
@@ -31,7 +46,7 @@ export default function ResultsScreen({ navigation, route }) {
 
           <TouchableOpacity
             style={styles.homeButton}
-            onPress={() => navigation.navigate("History")}
+            onPress={() => navigation.navigate("MainTabs", { screen: "History" })}
           >
             <Text style={styles.homeButtonText}>
               BACK TO HISTORY
@@ -42,6 +57,9 @@ export default function ResultsScreen({ navigation, route }) {
     );
   }
 
+  // ==============================================================
+  // [LOGIC] Scoring, retake and delete
+  // ==============================================================
   // Re-check the saved answers against the saved questions
   const { results, correctCount, totalQuestions, percentage } = scoreQuiz(
     attempt.questions,
@@ -55,25 +73,22 @@ export default function ResultsScreen({ navigation, route }) {
     navigation.replace("Answer", { quizId: attempt.quizId });
   };
 
+  // [LOGIC] Ask first, then remove from Context and go back to History
   // DELETE one attempt (with confirmation)
   const deleteResult = () => {
-    Alert.alert(
+    confirmAction(
       "Delete result?",
       "This removes this attempt from your history.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            deleteAttempt(attempt.id);
-            navigation.navigate("History");
-          },
-        },
-      ]
+      () => {
+        deleteAttempt(attempt.id);
+        navigation.navigate("MainTabs", { screen: "History" });
+      }
     );
   };
 
+  // ==============================================================
+  // [UI] What the user sees (score card, summary, answer review, buttons)
+  // ==============================================================
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -81,7 +96,7 @@ export default function ResultsScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate("MainTabs", { screen: "History" })}
         >
           <Text style={styles.backText}>
             ‹ Back
@@ -100,6 +115,7 @@ export default function ResultsScreen({ navigation, route }) {
           {formatDate(attempt.submittedAt)} • ⏱ {formatTime(attempt.durationSeconds)}
         </Text>
 
+        {/* [UI] Big score card. [LOGIC] correctCount, totalQuestions, percentage */}
         <View style={styles.scoreCard}>
           <Text style={styles.scoreLabel}>
             YOUR SCORE
@@ -120,6 +136,7 @@ export default function ResultsScreen({ navigation, route }) {
           </Text>
         </View>
 
+        {/* [UI] Correct / Wrong / Total cards */}
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryNumber}>
@@ -156,6 +173,7 @@ export default function ResultsScreen({ navigation, route }) {
           ANSWER REVIEW
         </Text>
 
+        {/* [UI] One review card per question. Green = correct, red = wrong (item.isCorrect) */}
         {results.map((item, index) => (
           <View
             key={item.id}
@@ -219,6 +237,7 @@ export default function ResultsScreen({ navigation, route }) {
               </Text>
             </View>
 
+            {/* [UI] Show the correct answer only when the user was wrong */}
             {!item.isCorrect && (
               <View style={styles.correctAnswerBox}>
                 <Text style={styles.answerLabel}>
@@ -248,6 +267,7 @@ export default function ResultsScreen({ navigation, route }) {
           </View>
         ))}
 
+        {/* [UI] RETAKE button, only if the quiz still exists. [NAVIGATION] replace -> Answer */}
         {quizStillExists && (
           <TouchableOpacity
             style={styles.retakeButton}
@@ -261,13 +281,14 @@ export default function ResultsScreen({ navigation, route }) {
 
         <TouchableOpacity
           style={styles.homeButton}
-          onPress={() => navigation.navigate("Home")}
+          onPress={() => navigation.navigate("MainTabs", { screen: "Home" })}
         >
           <Text style={styles.homeButtonText}>
             BACK TO HOME
           </Text>
         </TouchableOpacity>
 
+        {/* [UI] DELETE THIS RESULT button -> deleteResult() */}
         <TouchableOpacity
           style={styles.deleteButton}
           onPress={deleteResult}
@@ -285,6 +306,9 @@ export default function ResultsScreen({ navigation, route }) {
   );
 }
 
+// ==============================================================
+// [STYLES] All colors, sizes and spacing for this screen
+// ==============================================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
