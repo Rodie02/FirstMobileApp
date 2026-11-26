@@ -1,3 +1,16 @@
+// ==============================================================
+// FILE: MakerScreen.js  (tab: Create)
+// WHAT:  Create a new quiz OR edit an existing one. Can also import questions from an API.
+//
+// DATA FLOW (create):  type in inputs -> updateQuestion/updateChoice -> `questions` state
+//                      -> POST QUIZ -> postQuiz() validates -> addQuiz() in Context -> saved to AsyncStorage
+// DATA FLOW (edit):    Quizzes tab sends { quizId } -> useEffect([editingId]) fills the form
+//                      -> SAVE CHANGES -> updateQuiz() in Context
+// DATA FLOW (API):     useEffect([]) fetches categories on mount; IMPORT button fetches questions
+//                      -> loading spinner / error text -> imported questions are added to `questions`
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -8,10 +21,13 @@ import {
   ScrollView,
   SafeAreaView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
+import { showMessage } from "./helpers";
 
+// ==============================================================
+// [LOGIC] Helper functions that live outside the component
+// ==============================================================
 const createEmptyQuestion = () => ({
   id: `${Date.now()}-${Math.random()}`,
   type: "Multiple Choice",
@@ -31,6 +47,9 @@ const shuffle = (array) => {
 };
 
 export default function MakerScreen({ navigation, route }) {
+  // ==============================================================
+  // [STATE] Context functions, edit mode, form data and API data
+  // ==============================================================
   const { addQuiz, updateQuiz, getQuizById } = useQuiz();
 
   // EDIT MODE: the Quizzes tab sends navigation.navigate("Create", { quizId })
@@ -48,6 +67,9 @@ export default function MakerScreen({ navigation, route }) {
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState(null);
 
+  // ==============================================================
+  // [LOGIC] Form reset + lifecycle effects (edit mode, loading categories)
+  // ==============================================================
   const resetForm = () => {
     setQuizTitle("");
     setQuestions([createEmptyQuestion()]);
@@ -105,6 +127,9 @@ export default function MakerScreen({ navigation, route }) {
     };
   }, []);
 
+  // ==============================================================
+  // [LOGIC] API FETCH: import questions (loading -> success or error)
+  // ==============================================================
   // Fetches questions from Open Trivia DB using async/await
   const importQuestions = async () => {
     setIsImporting(true);
@@ -172,6 +197,9 @@ export default function MakerScreen({ navigation, route }) {
     }
   };
 
+  // ==============================================================
+  // [LOGIC] Functions that change the `questions` state when the user types or taps
+  // ==============================================================
   const questionTypes = [
     "Multiple Choice",
     "Identification",
@@ -252,12 +280,16 @@ export default function MakerScreen({ navigation, route }) {
     );
   };
 
+  // ==============================================================
+  // [LOGIC] VALIDATE then SAVE: creates a new quiz or updates the one being edited
+  // ==============================================================
   const postQuiz = () => {
     if (quizTitle.trim() === "") {
       alert("Please enter a quiz title.");
       return;
     }
 
+    // [LOGIC] Validation: stop and show a message if anything is missing
     for (let i = 0; i < questions.length; i++) {
       const item = questions[i];
 
@@ -306,6 +338,7 @@ export default function MakerScreen({ navigation, route }) {
       correctAnswer: item.correctAnswer.trim(),
     }));
 
+    // [LOGIC] Save to global state: UPDATE if editing, otherwise CREATE
     if (isEditing) {
       // UPDATE
       updateQuiz(editingId, {
@@ -326,18 +359,22 @@ export default function MakerScreen({ navigation, route }) {
     navigation.setParams({ quizId: undefined }); // leave edit mode
     navigation.navigate("Quizzes");
 
-    Alert.alert(
+    showMessage(
       "Success",
       isEditing ? "Quiz updated!" : "Quiz posted successfully!"
     );
   };
 
+  // [LOGIC] Leave edit mode without saving
   const cancelEdit = () => {
     resetForm();
     navigation.setParams({ quizId: undefined });
     navigation.navigate("Quizzes");
   };
 
+  // ==============================================================
+  // [UI] What the user sees (form, question cards, API card, buttons)
+  // ==============================================================
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -369,6 +406,7 @@ export default function MakerScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* [UI] Quiz title input */}
         <View style={styles.titleCard}>
           <Text style={styles.label}>QUIZ TITLE</Text>
 
@@ -381,6 +419,7 @@ export default function MakerScreen({ navigation, route }) {
           />
         </View>
 
+        {/* [UI] One card per question (loops over the `questions` state) */}
         {questions.map((item, index) => (
           <View style={styles.questionCard} key={item.id}>
             <View style={styles.questionHeader}>
@@ -448,6 +487,7 @@ export default function MakerScreen({ navigation, route }) {
               multiline
             />
 
+            {/* [UI] Shown only for Multiple Choice (conditional rendering) */}
             {item.type === "Multiple Choice" && (
               <View>
                 <Text style={styles.label}>
@@ -505,6 +545,7 @@ export default function MakerScreen({ navigation, route }) {
               </View>
             )}
 
+            {/* [UI] Shown only for Identification */}
             {item.type === "Identification" && (
               <View>
                 <Text style={styles.label}>
@@ -527,6 +568,7 @@ export default function MakerScreen({ navigation, route }) {
               </View>
             )}
 
+            {/* [UI] Shown only for Enumeration */}
             {item.type === "Enumeration" && (
               <View>
                 <Text style={styles.label}>
@@ -554,6 +596,7 @@ export default function MakerScreen({ navigation, route }) {
               </View>
             )}
 
+            {/* [UI] Shown only for Essay */}
             {item.type === "Essay" && (
               <View>
                 <Text style={styles.label}>
@@ -582,7 +625,7 @@ export default function MakerScreen({ navigation, route }) {
             )}
           </View>
         ))}
-        {/* IMPORT FROM API */}
+        {/* [UI] API import card. [LOGIC] categories, amount, importQuestions() */}
         <View style={styles.apiCard}>
           <Text style={styles.label}>IMPORT FROM OPEN TRIVIA DB</Text>
 
@@ -669,6 +712,7 @@ export default function MakerScreen({ navigation, route }) {
             <Text style={styles.errorText}>{importError}</Text>
           )}
         </View>
+        {/* [UI] + ADD QUESTION button -> addQuestion() */}
         <TouchableOpacity
           style={styles.addButton}
           onPress={addQuestion}
@@ -679,6 +723,7 @@ export default function MakerScreen({ navigation, route }) {
           </Text>
         </TouchableOpacity>
 
+        {/* [UI] POST QUIZ / SAVE CHANGES button -> postQuiz() */}
         <TouchableOpacity
           style={styles.postButton}
           onPress={postQuiz}
@@ -701,6 +746,9 @@ export default function MakerScreen({ navigation, route }) {
   );
 }
 
+// ==============================================================
+// [STYLES] All colors, sizes and spacing for this screen
+// ==============================================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
