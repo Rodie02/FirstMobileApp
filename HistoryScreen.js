@@ -1,3 +1,10 @@
+// ==============================================================
+// FILE: HistoryScreen.js  (tab: History)
+// WHAT:  Lists every submitted attempt. Tap one to see its Results.
+// DATA FLOW: useQuiz() -> attempts -> FlatList -> tap -> navigate('Results', { attemptId })
+// SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
+// ==============================================================
+
 // HistoryScreen.js  (History tab)
 // Lists every submitted attempt (READ). Tap one to open Results (stack screen)
 // and pass its id as a route param.
@@ -10,28 +17,37 @@ import {
   StyleSheet,
   FlatList,
   SafeAreaView,
-  Alert,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { formatDate, formatTime } from "./helpers";
+import { formatDate, formatTime, confirmAction } from "./helpers";
 
 export default function HistoryScreen({ navigation }) {
+  // ==============================================================
+  // [STATE + LOGIC] Global data from Context, and the clear-all handler
+  // ==============================================================
   const { attempts, clearAttempts } = useQuiz();
 
   const confirmClear = () => {
-    Alert.alert("Clear history?", "All submitted results will be removed.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Clear", style: "destructive", onPress: clearAttempts },
-    ]);
+    confirmAction(
+      "Clear history?",
+      "All submitted results will be removed.",
+      clearAttempts,
+      "Clear"
+    );
   };
 
+  // ==============================================================
+  // [UI] One attempt card (FlatList calls this once per attempt)
+  // ==============================================================
   const renderAttempt = ({ item }) => {
+    // [LOGIC] 75% or higher = green badge, otherwise red
     const passed = item.percentage >= 75;
 
     return (
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.8}
+        // [NAVIGATION] open Results for this attempt
         onPress={() => navigation.navigate("Results", { attemptId: item.id })}
       >
         <View style={styles.cardContent}>
@@ -52,6 +68,9 @@ export default function HistoryScreen({ navigation }) {
     );
   };
 
+  // ==============================================================
+  // [UI] The screen: a FlatList of attempt cards
+  // ==============================================================
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
@@ -60,6 +79,7 @@ export default function HistoryScreen({ navigation }) {
         renderItem={renderAttempt}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        // [UI] Title and Clear all button
         ListHeaderComponent={
           <View style={styles.headerRow}>
             <View>
@@ -74,6 +94,7 @@ export default function HistoryScreen({ navigation }) {
             )}
           </View>
         }
+        // [UI] Shown when there are no attempts yet
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyTitle}>No Results Yet</Text>
@@ -92,6 +113,9 @@ export default function HistoryScreen({ navigation }) {
   );
 }
 
+// ==============================================================
+// [STYLES] All colors, sizes and spacing for this screen
+// ==============================================================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F4F6FA" },
   content: { padding: 20, paddingBottom: 40 },
