@@ -7,7 +7,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { useQuiz } from "./QuizContext";
-import { USE_NATIVE_DRIVER } from "./helpers";
+import { USE_NATIVE_DRIVER } from "./Helpers";
 import {
   View,
   Text,

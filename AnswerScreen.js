@@ -21,7 +21,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { scoreQuiz, formatTime, showMessage } from "./helpers";
+import { scoreQuiz, formatTime, showMessage } from "./Helpers";
 
 export default function AnswerScreen({ navigation, route }) {
   // ==============================================================

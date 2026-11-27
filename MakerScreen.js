@@ -23,7 +23,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { showMessage } from "./helpers";
+import { showMessage } from "./Helpers";
 
 // ==============================================================
 // [LOGIC] Helper functions that live outside the component

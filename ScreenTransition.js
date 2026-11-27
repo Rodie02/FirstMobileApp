@@ -18,7 +18,7 @@
 import React, { useEffect, useRef } from "react";
 import { Animated } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
-import { USE_NATIVE_DRIVER } from "./helpers";
+import { USE_NATIVE_DRIVER } from "./Helpers";
 
 export default function ScreenTransition({ children }) {
   // [STATE] animated values (start invisible and 24px lower)

@@ -19,7 +19,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { formatDate, confirmAction } from "./helpers";
+import { formatDate, confirmAction } from "./Helpers";
 
 export default function QuizListScreen({ navigation }) {
   // ==============================================================

@@ -33,7 +33,7 @@ import MakerScreen from "./MakerScreen";
 import HistoryScreen from "./HistoryScreen";
 import AnswerScreen from "./AnswerScreen";
 import ResultsScreen from "./ResultsScreen";
-import { showMessage } from "./helpers";
+import { showMessage } from "./Helpers";
 import ScreenTransition from "./ScreenTransition";
 
 // ==============================================================

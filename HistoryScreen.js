@@ -19,7 +19,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { formatDate, formatTime, confirmAction } from "./helpers";
+import { formatDate, formatTime, confirmAction } from "./Helpers";
 
 export default function HistoryScreen({ navigation }) {
   // ==============================================================
