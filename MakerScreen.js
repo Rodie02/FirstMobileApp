@@ -11,7 +11,7 @@
 // SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
 // ==============================================================
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -28,6 +28,24 @@ import { showMessage } from "./helpers";
 // ==============================================================
 // [LOGIC] Helper functions that live outside the component
 // ==============================================================
+// [LOGIC] Quick-pick subjects. Each id is an Open Trivia DB category id.
+// id 0 = any category. Picking a subject just sets `selectedCategory`.
+const SUBJECTS = [
+  { id: 0, label: "Any", icon: "🎲" },
+  { id: 17, label: "Science", icon: "🔬" },
+  { id: 19, label: "Math", icon: "➗" },
+  { id: 18, label: "Computers", icon: "💻" },
+  { id: 22, label: "Geography", icon: "🌍" },
+  { id: 23, label: "History", icon: "📜" },
+  { id: 9, label: "General Knowledge", icon: "📖" },
+  { id: 21, label: "Sports", icon: "⚽" },
+  { id: 27, label: "Animals", icon: "🐾" },
+  { id: 25, label: "Art", icon: "🎨" },
+  { id: 12, label: "Music", icon: "🎵" },
+  { id: 11, label: "Film", icon: "🎬" },
+  { id: 15, label: "Video Games", icon: "🎮" },
+];
+
 const createEmptyQuestion = () => ({
   id: `${Date.now()}-${Math.random()}`,
   type: "Multiple Choice",
@@ -64,6 +82,18 @@ export default function MakerScreen({ navigation, route }) {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(0); // 0 = any
   const [amount, setAmount] = useState(5);
+
+  // [LOGIC] Scroll buttons for the category row.
+  // useRef keeps a handle to the ScrollView and its current offset
+  // without causing a re-render every time the user scrolls.
+  const categoryScrollRef = useRef(null);
+  const categoryOffset = useRef(0);
+
+  const scrollCategories = (direction) => {
+    // direction: -1 = left, 1 = right
+    const nextOffset = Math.max(0, categoryOffset.current + direction * 220);
+    categoryScrollRef.current?.scrollTo({ x: nextOffset, animated: true });
+  };
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState(null);
 
@@ -629,51 +659,96 @@ export default function MakerScreen({ navigation, route }) {
         <View style={styles.apiCard}>
           <Text style={styles.label}>IMPORT FROM OPEN TRIVIA DB</Text>
 
-          <Text style={styles.hint}>Category</Text>
+          {/* [UI] Subject quick-pick (wraps onto several lines, no scrolling needed) */}
+          <Text style={styles.hint}>Subject</Text>
 
-          {categoriesLoading ? (
-            <ActivityIndicator color="#111827" />
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipRow}
-            >
+          <View style={styles.chipWrap}>
+            {SUBJECTS.map((subject) => (
               <TouchableOpacity
-                style={[styles.chip, selectedCategory === 0 && styles.chipSelected]}
-                onPress={() => setSelectedCategory(0)}
+                key={subject.id}
+                style={[
+                  styles.chip,
+                  selectedCategory === subject.id && styles.chipSelected,
+                ]}
+                onPress={() => setSelectedCategory(subject.id)}
               >
                 <Text
                   style={[
                     styles.chipText,
-                    selectedCategory === 0 && styles.chipTextSelected,
+                    selectedCategory === subject.id && styles.chipTextSelected,
                   ]}
                 >
-                  Any
+                  {subject.icon} {subject.label}
                 </Text>
               </TouchableOpacity>
+            ))}
+          </View>
 
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.chip,
-                    selectedCategory === category.id && styles.chipSelected,
-                  ]}
-                  onPress={() => setSelectedCategory(category.id)}
-                >
-                  <Text
+          {/* [UI] More categories loaded from the API, with scroll buttons.
+              [LOGIC] the arrows call scrollCategories(-1 / 1) */}
+          <Text style={[styles.hint, { marginTop: 14 }]}>More categories</Text>
+
+          {categoriesLoading ? (
+            <ActivityIndicator color="#111827" />
+          ) : (
+            <View style={styles.scrollRow}>
+              <TouchableOpacity
+                style={styles.arrowButton}
+                onPress={() => scrollCategories(-1)}
+              >
+                <Text style={styles.arrowText}>‹</Text>
+              </TouchableOpacity>
+
+              <ScrollView
+                ref={categoryScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onScroll={(event) => {
+                  categoryOffset.current = event.nativeEvent.contentOffset.x;
+                }}
+                style={styles.categoryScroll}
+                contentContainerStyle={styles.chipRow}
+              >
+                {categories.map((category) => (
+                  <TouchableOpacity
+                    key={category.id}
                     style={[
-                      styles.chipText,
-                      selectedCategory === category.id && styles.chipTextSelected,
+                      styles.chip,
+                      selectedCategory === category.id && styles.chipSelected,
                     ]}
+                    onPress={() => setSelectedCategory(category.id)}
                   >
-                    {category.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selectedCategory === category.id && styles.chipTextSelected,
+                      ]}
+                    >
+                      {category.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={styles.arrowButton}
+                onPress={() => scrollCategories(1)}
+              >
+                <Text style={styles.arrowText}>›</Text>
+              </TouchableOpacity>
+            </View>
           )}
+
+          {/* [UI] Shows what will be imported */}
+          <Text style={styles.selectedInfo}>
+            Selected:{" "}
+            {selectedCategory === 0
+              ? "Any category"
+              : SUBJECTS.find((subject) => subject.id === selectedCategory)?.label ||
+                categories.find((category) => category.id === selectedCategory)?.name ||
+                "Category " + selectedCategory}
+          </Text>
 
           <Text style={[styles.hint, { marginTop: 12 }]}>How many questions</Text>
 
@@ -1053,5 +1128,44 @@ const styles = StyleSheet.create({
     color: "#B91C1C",
     fontWeight: "900",
     fontSize: 13,
+  },
+
+  chipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+
+  scrollRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  categoryScroll: {
+    flex: 1,
+  },
+
+  arrowButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#111827",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  arrowText: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "900",
+    lineHeight: 26,
+  },
+
+  selectedInfo: {
+    marginTop: 12,
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#047857",
   },
 });
