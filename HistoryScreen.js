@@ -25,7 +25,17 @@ export default function HistoryScreen({ navigation }) {
   // ==============================================================
   // [STATE + LOGIC] Global data from Context, and the clear-all handler
   // ==============================================================
-  const { attempts, clearAttempts } = useQuiz();
+  const { attempts, clearAttempts, deleteAttempt } = useQuiz();
+
+  // [LOGIC] Delete ONE attempt: ask first, then remove it from Context
+  // (Context state changes -> list re-renders -> AsyncStorage is updated)
+  const confirmDelete = (attempt) => {
+    confirmAction(
+      "Delete result?",
+      `Remove your attempt on "${attempt.quizTitle}" from history?`,
+      () => deleteAttempt(attempt.id)
+    );
+  };
 
   const confirmClear = () => {
     confirmAction(
@@ -44,27 +54,47 @@ export default function HistoryScreen({ navigation }) {
     const passed = item.percentage >= 75;
 
     return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.8}
-        // [NAVIGATION] open Results for this attempt
-        onPress={() => navigation.navigate("Results", { attemptId: item.id })}
-      >
-        <View style={styles.cardContent}>
-          <Text style={styles.cardTitle}>{item.quizTitle}</Text>
-          <Text style={styles.cardMeta}>{formatDate(item.submittedAt)}</Text>
-          <Text style={styles.cardMeta}>
-            ⏱ {formatTime(item.durationSeconds)} • {item.correctCount} /{" "}
-            {item.totalQuestions} correct
-          </Text>
-        </View>
+      <View style={styles.card}>
+        {/* [UI] Top part: tap anywhere here to open the result */}
+        <TouchableOpacity
+          style={styles.cardTop}
+          activeOpacity={0.8}
+          // [NAVIGATION] open Results for this attempt
+          onPress={() => navigation.navigate("Results", { attemptId: item.id })}
+        >
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>{item.quizTitle}</Text>
+            <Text style={styles.cardMeta}>{formatDate(item.submittedAt)}</Text>
+            <Text style={styles.cardMeta}>
+              ⏱ {formatTime(item.durationSeconds)} • {item.correctCount} /{" "}
+              {item.totalQuestions} correct
+            </Text>
+          </View>
 
-        <View style={[styles.badge, passed ? styles.goodBadge : styles.badBadge]}>
-          <Text style={[styles.badgeText, passed ? styles.goodText : styles.badText]}>
-            {item.percentage}%
-          </Text>
+          <View style={[styles.badge, passed ? styles.goodBadge : styles.badBadge]}>
+            <Text style={[styles.badgeText, passed ? styles.goodText : styles.badText]}>
+              {item.percentage}%
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* [UI] Buttons: VIEW RESULT and DELETE. [LOGIC] DELETE calls confirmDelete() */}
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={styles.viewButton}
+            onPress={() => navigation.navigate("Results", { attemptId: item.id })}
+          >
+            <Text style={styles.viewButtonText}>VIEW RESULT</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => confirmDelete(item)}
+          >
+            <Text style={styles.deleteButtonText}>DELETE</Text>
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -135,12 +165,30 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
+  cardTop: { flexDirection: "row", alignItems: "center" },
   cardContent: { flex: 1 },
+
+  cardActions: { flexDirection: "row", gap: 8, marginTop: 14 },
+  viewButton: {
+    flex: 1,
+    backgroundColor: "#111827",
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  viewButtonText: { color: "#FFFFFF", fontWeight: "900", fontSize: 12, letterSpacing: 1 },
+  deleteButton: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: "#DC2626",
+    paddingVertical: 9,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  deleteButtonText: { color: "#DC2626", fontWeight: "900", fontSize: 12, letterSpacing: 1 },
   cardTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
   cardMeta: { color: "#6B7280", fontSize: 12, marginTop: 4, fontWeight: "600" },
 
