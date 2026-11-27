@@ -5,8 +5,9 @@
 // SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
 // ==============================================================
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useQuiz } from "./QuizContext";
+import { USE_NATIVE_DRIVER } from "./helpers";
 import {
   View,
   Text,
@@ -14,6 +15,8 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Image,
+  Animated,
 } from "react-native";
 
 export default function HomeScreen({ navigation }) {
@@ -22,6 +25,18 @@ export default function HomeScreen({ navigation }) {
   // ==============================================================
   // Global state from Context. Whenever quizzes/attempts change, this screen re-renders (Update phase).
   const { quizzes, attempts } = useQuiz();
+
+  // [LOGIC] Logo "pop" animation: scale goes from 0.6 to 1 with a spring bounce
+  // when the Home screen first appears (useEffect with [] = run once on mount).
+  const logoScale = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    Animated.spring(logoScale, {
+      toValue: 1,
+      friction: 4,
+      useNativeDriver: USE_NATIVE_DRIVER,
+    }).start();
+  }, []);
 
   const averageScore =
     attempts.length > 0
@@ -47,16 +62,22 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.appTitle}>Quiz App</Text>
           </View>
 
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>Q</Text>
-          </View>
+          {/* [UI] App logo (assets/logo.png) */}
+          <Image
+            source={require("./assets/logo.png")}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Welcome Section */}
         <View style={styles.welcomeCard}>
-          <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>Q</Text>
-          </View>
+          {/* [UI] Big animated logo. [LOGIC] scale comes from logoScale */}
+          <Animated.Image
+            source={require("./assets/logo.png")}
+            style={[styles.welcomeLogo, { transform: [{ scale: logoScale }] }]}
+            resizeMode="contain"
+          />
 
           <Text style={styles.welcomeSmall}>WELCOME TO</Text>
 
@@ -404,5 +425,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#6B7280",
     marginTop: 3,
+  },
+
+  headerLogo: {
+    width: 56,
+    height: 56,
+  },
+
+  welcomeLogo: {
+    width: 150,
+    height: 150,
+    alignSelf: "center",
+    marginBottom: 14,
   },
 });
