@@ -7,6 +7,9 @@
 
 import { Alert, Platform } from "react-native";
 
+// [LOGIC] Animations can run on the native thread on phones, but not on web.
+export const USE_NATIVE_DRIVER = Platform.OS !== "web";
+
 // ==============================================================
 // [LOGIC] Cross-platform dialogs (web uses window.confirm, phone uses Alert)
 // ==============================================================
