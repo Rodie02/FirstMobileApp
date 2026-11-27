@@ -4,7 +4,7 @@
 //
 // DATA FLOW: navigate('Results', { attemptId }) -> getAttemptById() from Context
 //            -> scoreQuiz(attempt.questions, attempt.answers) -> score cards + review list
-//            DELETE -> confirmAction -> deleteAttempt() in Context -> back to History
+//            (Deleting a result is done from the History tab, not here)
 // SEARCH (Ctrl+F):  [STATE]  [LOGIC]  [UI]  [NAVIGATION]  [STYLES]
 // ==============================================================
 
@@ -18,7 +18,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { useQuiz } from "./QuizContext";
-import { scoreQuiz, formatTime, formatDate, confirmAction } from "./helpers";
+import { scoreQuiz, formatTime, formatDate } from "./helpers";
 
 export default function ResultsScreen({ navigation, route }) {
   // ==============================================================
@@ -26,7 +26,7 @@ export default function ResultsScreen({ navigation, route }) {
   // ==============================================================
   // Which attempt? It arrives as a route param: navigation.navigate("Results", { attemptId })
   const { attemptId } = route.params || {};
-  const { getAttemptById, getQuizById, deleteAttempt } = useQuiz();
+  const { getAttemptById, getQuizById } = useQuiz();
   const attempt = getAttemptById(attemptId);
 
   // ==============================================================
@@ -58,7 +58,7 @@ export default function ResultsScreen({ navigation, route }) {
   }
 
   // ==============================================================
-  // [LOGIC] Scoring, retake and delete
+  // [LOGIC] Scoring and retake
   // ==============================================================
   // Re-check the saved answers against the saved questions
   const { results, correctCount, totalQuestions, percentage } = scoreQuiz(
@@ -71,19 +71,6 @@ export default function ResultsScreen({ navigation, route }) {
 
   const retakeQuiz = () => {
     navigation.replace("Answer", { quizId: attempt.quizId });
-  };
-
-  // [LOGIC] Ask first, then remove from Context and go back to History
-  // DELETE one attempt (with confirmation)
-  const deleteResult = () => {
-    confirmAction(
-      "Delete result?",
-      "This removes this attempt from your history.",
-      () => {
-        deleteAttempt(attempt.id);
-        navigation.navigate("MainTabs", { screen: "History" });
-      }
-    );
   };
 
   // ==============================================================
@@ -285,16 +272,6 @@ export default function ResultsScreen({ navigation, route }) {
         >
           <Text style={styles.homeButtonText}>
             BACK TO HOME
-          </Text>
-        </TouchableOpacity>
-
-        {/* [UI] DELETE THIS RESULT button -> deleteResult() */}
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={deleteResult}
-        >
-          <Text style={styles.deleteButtonText}>
-            DELETE THIS RESULT
           </Text>
         </TouchableOpacity>
 
@@ -552,23 +529,6 @@ const styles = StyleSheet.create({
 
   homeButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-
-  deleteButton: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "#DC2626",
-    paddingVertical: 16,
-    borderRadius: 15,
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-  deleteButtonText: {
-    color: "#DC2626",
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 1,
