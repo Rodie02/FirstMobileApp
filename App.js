@@ -34,10 +34,32 @@ import HistoryScreen from "./HistoryScreen";
 import AnswerScreen from "./AnswerScreen";
 import ResultsScreen from "./ResultsScreen";
 import { showMessage } from "./helpers";
+import ScreenTransition from "./ScreenTransition";
 
 // ==============================================================
 // [NAVIGATION] Create the two navigators (Stack = screens on top, Tab = bottom bar)
 // ==============================================================
+// ==============================================================
+// [UI] ANIMATION: withTransition() wraps a screen in <ScreenTransition>
+// so it fades/slides in whenever the user navigates to it.
+// Created once here (outside components) so the screens are not re-created.
+// ==============================================================
+const withTransition = (Screen) =>
+  function AnimatedScreen(props) {
+    return (
+      <ScreenTransition>
+        <Screen {...props} />
+      </ScreenTransition>
+    );
+  };
+
+const AnimatedHome = withTransition(HomeScreen);
+const AnimatedQuizList = withTransition(QuizListScreen);
+const AnimatedMaker = withTransition(MakerScreen);
+const AnimatedHistory = withTransition(HistoryScreen);
+const AnimatedAnswer = withTransition(AnswerScreen);
+const AnimatedResults = withTransition(ResultsScreen);
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -66,13 +88,13 @@ function MainTabs() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={AnimatedHome}
         options={{ tabBarIcon: tabIcon("🏠") }}
       />
 
       <Tab.Screen
         name="Quizzes"
-        component={QuizListScreen}
+        component={AnimatedQuizList}
         options={{
           tabBarIcon: tabIcon("📚"),
           tabBarBadge: quizzes.length > 0 ? quizzes.length : undefined,
@@ -81,13 +103,13 @@ function MainTabs() {
 
       <Tab.Screen
         name="Create"
-        component={MakerScreen}
+        component={AnimatedMaker}
         options={{ tabBarIcon: tabIcon("➕") }}
       />
 
       <Tab.Screen
         name="History"
-        component={HistoryScreen}
+        component={AnimatedHistory}
         options={{
           tabBarIcon: tabIcon("📊"),
           tabBarBadge: attempts.length > 0 ? attempts.length : undefined,
@@ -126,8 +148,8 @@ function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={MainTabs} />
-        <Stack.Screen name="Answer" component={AnswerScreen} />
-        <Stack.Screen name="Results" component={ResultsScreen} />
+        <Stack.Screen name="Answer" component={AnimatedAnswer} />
+        <Stack.Screen name="Results" component={AnimatedResults} />
       </Stack.Navigator>
     </NavigationContainer>
   );
